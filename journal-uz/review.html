@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Рецензирование</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+    </div>
+  </nav>
+  <div class="container mt-5">
+    <h2>Статьи на рецензию</h2>
+    <div id="reviewsList" class="row"></div>
+  </div>
+
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { firebaseConfig } from './firebase-config.js';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadReviews() {
+      const q = query(collection(db, 'submissions'), where('status', '==', 'На рецензии'));
+      const snapshot = await getDocs(q);
+      const list = document.getElementById('reviewsList');
+      list.innerHTML = '';
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const card = `
+          <div class="col-md-6 mb-3">
+            <div class="card">
+              <div class="card-body">
+                <h5>${data.title}</h5>
+                <a href="${data.fileURL}" target="_blank" class="btn btn-sm btn-info">Открыть PDF</a>
+                <form class="mt-2">
+                  <textarea class="form-control" placeholder="Ваш отзыв" id="review-${doc.id}"></textarea>
+                  <select class="form-select mt-2" id="score-${doc.id}">
+                    <option>Балл: 1-5</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${doc.id}')">Отправить отзыв</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        `;
+        list.innerHTML += card;
+      });
+    }
+
+    window.submitReview = async (id) => {
+      // Здесь добавь сохранение отзыва в DB (reviews collection)
+      alert('Отзыв отправлен! (Добавь код сохранения)');
+    };
+
+    loadReviews();
+  </script>
+</body>
+</html>

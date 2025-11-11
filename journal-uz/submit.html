@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подача статьи</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+    </div>
+  </nav>
+  <div class="container mt-5">
+    <div class="card">
+      <div class="card-header"><h3>Подача статьи</h3></div>
+      <div class="card-body">
+        <form id="submitForm">
+          <div class="mb-3">
+            <label class="form-label">Название статьи</label>
+            <input type="text" class="form-control" id="title" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Авторы (через запятую)</label>
+            <input type="text" class="form-control" id="authors" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Аннотация</label>
+            <textarea class="form-control" id="abstract" rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Файл (PDF, max 10MB)</label>
+            <input type="file" class="form-control" id="file" accept=".pdf" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ ИСПРАВЛЕННЫЙ СКРИПТ: Config внутри, без src -->
+  <script type="module">
+    // Полные импорты (без 'firebase/app')
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js';
+    import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-storage.js';
+
+    // ✅ ВСТАВЬ СВОЙ CONFIG ЗДЕСЬ (из Firebase Console)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",  // Твой apiKey!
+      authDomain: "journal-uz.firebaseapp.com",
+      projectId: "journal-uz",
+      storageBucket: "journal-uz.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abc123def456"
+    };
+
+    // Инициализация
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    console.log('Firebase готов в submit.html!');  // Тест
+
+    // Обработка формы
+    document.getElementById('submitForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const authors = document.getElementById('authors').value;
+      const abstract = document.getElementById('abstract').value;
+      const file = document.getElementById('file').files[0];
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Файл слишком большой!');
+        return;
+      }
+
+      try {
+        // Загрузка файла
+        const fileRef = ref(storage, `submissions/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        const fileURL = await getDownloadURL(fileRef);
+
+        // Сохранение в DB
+        await addDoc(collection(db, 'submissions'), {
+          title,
+          authors,
+          abstract,
+          fileURL,
+          status: 'Подана',
+          submittedAt: new Date(),
+          authorId: 'temp-user' // Замени на реальный UID после логина
+        });
+
+        alert('Статья подана! Статус: Подана');
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        console.error(error);
+        alert('Ошибка: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

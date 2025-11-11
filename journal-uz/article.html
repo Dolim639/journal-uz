@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Просмотр статьи</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+    </div>
+  </nav>
+  <div class="container mt-5">
+    <h2 id="title"></h2>
+    <p id="authors"></p>
+    <p id="abstract"></p>
+    <canvas id="pdf-canvas"></canvas>
+  </div>
+
+  <script>
+    // Пример: Загрузи PDF по URL из query param ?url=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileURL = urlParams.get('url');
+    if (fileURL) {
+      // Используй pdf.js для рендера (упрощённо)
+      pdfjsLib.getDocument(fileURL).promise.then(pdf => {
+        pdf.getPage(1).then(page => {
+          const canvas = document.getElementById('pdf-canvas');
+          const ctx = canvas.getContext('2d');
+          const viewport = page.getViewport({ scale: 1.5 });
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          page.render({ canvasContext: ctx, viewport });
+        });
+      });
+    }
+  </script>
+</body>
+</html>
