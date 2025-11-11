@@ -17,22 +17,25 @@
     <div id="submissionsList" class="row"></div>
   </div>
 
-  <!-- Supabase SDK через CDN -->
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    import { supabaseUrl, supabaseKey } from './supabase-config.js';  // Твой config
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    // Инициализация Supabase
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase готов!');
 
     async function loadSubmissions() {
       try {
-        // Выборка из submissions (сортировка по submitted_at desc, фильтр по author_id если нужно)
+        // Анонимный auth для RLS
+        const { data: { user } } = await supabase.auth.signInAnonymously();
+        if (!user) throw new Error('Анонимный логин не удался');
+
+        // Выборка (фильтр по author_id, если RLS включён)
         const { data: submissions, error } = await supabase
           .from('submissions')
           .select('*')
-          .order('submitted_at', { ascending: false });  // Новые сверху
+          .eq('author_id', user.id)  // Только свои статьи
+          .order('submitted_at', { ascending: false });
 
         if (error) throw error;
 
@@ -65,7 +68,7 @@
       }
     }
 
-    loadSubmissions();  // Загрузка при открытии страницы
+    loadSubmissions();
   </script>
 </body>
 </html>
