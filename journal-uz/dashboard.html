@@ -10,6 +10,9 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
       <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <div class="navbar-nav ms-auto">
+        <button class="btn btn-outline-light" id="logoutBtn" style="display: none;">Выйти</button>
+      </div>
     </div>
   </nav>
   <div class="container mt-5">
@@ -24,17 +27,26 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase готов!');
 
-    async function loadSubmissions() {
-      try {
-        // Анонимный auth для RLS
-        const { data: { user } } = await supabase.auth.signInAnonymously();
-        if (!user) throw new Error('Анонимный логин не удался');
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      document.getElementById('logoutBtn').style.display = 'block';
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'login.html';
+      });
+      loadSubmissions(session.user.id);
+    }
 
-        // Выборка (фильтр по author_id, если RLS включён)
+    async function loadSubmissions(userId) {
+      try {
         const { data: submissions, error } = await supabase
           .from('submissions')
           .select('*')
-          .eq('author_id', user.id)  // Только свои статьи
+          .eq('author_id', userId)
           .order('submitted_at', { ascending: false });
 
         if (error) throw error;
@@ -64,11 +76,11 @@
         }
       } catch (error) {
         console.error(error);
-        document.getElementById('submissionsList').innerHTML = '<p class="col-12">Ошибка загрузки: ' + error.message + '</p>';
+        document.getElementById('submissionsList').innerHTML = '<p class="col-12">Ошибка: ' + error.message + '</p>';
       }
     }
 
-    loadSubmissions();
+    checkSession();
   </script>
 </body>
 </html>
