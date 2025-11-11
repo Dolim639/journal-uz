@@ -39,12 +39,10 @@
     </div>
   </div>
 
-  <!-- Supabase SDK через CDN -->
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    import { supabaseUrl, supabaseKey } from './supabase-config.js';  // Твой config
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    // Инициализация Supabase
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase готов!');
 
@@ -61,10 +59,14 @@
       }
 
       try {
-        // Загрузка файла в Supabase Storage (bucket 'submissions')
-        const fileName = `submissions/${Date.now()}_${file.name}`;
+        // Анонимный auth для RLS (если включён; генерирует temp UUID)
+        const { data: { user } } = await supabase.auth.signInAnonymously();
+        if (!user) throw new Error('Анонимный логин не удался');
+
+        // Загрузка файла (фикс: путь без префикса "submissions/", чтобы избежать двойного)
+        const fileName = `${Date.now()}_${file.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('submissions')  // Название твоего bucket
+          .from('submissions')  // Bucket
           .upload(fileName, file, { upsert: true });
 
         if (uploadError) throw uploadError;
@@ -74,7 +76,7 @@
           .from('submissions')
           .getPublicUrl(fileName);
 
-        // Вставка в таблицу submissions
+        // Вставка в таблицу (author_id = temp UUID от анонимного пользователя)
         const { data, error: insertError } = await supabase
           .from('submissions')
           .insert([
@@ -85,10 +87,10 @@
               file_url: publicUrl,
               status: 'Подана',
               submitted_at: new Date().toISOString(),
-              author_id: 'temp-user'  // Замени на реальный UUID после логина
+              author_id: user.id  // UUID от анонимного auth
             }
           ])
-          .select();  // Возвращает вставленную запись
+          .select();
 
         if (insertError) throw insertError;
 
