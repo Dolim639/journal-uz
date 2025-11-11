@@ -46,7 +46,7 @@
     const toggleBtn = document.getElementById('toggleBtn');
     const authForm = document.getElementById('authForm');
 
-    let isLogin = true;  // true = вход, false = регистрация
+    let isLogin = true;
 
     toggleBtn.addEventListener('click', () => {
       isLogin = !isLogin;
@@ -61,21 +61,21 @@
       const password = document.getElementById('password').value;
 
       try {
-        let data, error;
+        let result;
         if (isLogin) {
-          // Вход (деструктуризация прямо в await — фикс ошибки)
-          ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+          result = await supabase.auth.signInWithPassword({ email, password });
         } else {
-          // Регистрация
-          ({ data, error } = await supabase.auth.signUp({ email, password }));
-          if (data.user) alert('Проверьте email для подтверждения (если включено)');
+          result = await supabase.auth.signUp({ email, password });
+          if (result.data.user) alert('Проверьте email для подтверждения (если включено)');
         }
+
+        const { data, error } = result;
 
         if (error) throw error;
 
         if (data.user) {
           alert(isLogin ? 'Вход успешен!' : 'Регистрация успешна!');
-          window.location.href = 'dashboard.html';  // Redirect на дашборд
+          window.location.href = 'dashboard.html';
         }
       } catch (error) {
         console.error(error);
