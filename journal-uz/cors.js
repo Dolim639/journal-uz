@@ -1,0 +1,24 @@
+[
+  {
+    "origin": [
+      "https://journal-uz-dcj7.vercel.app",
+      "https://*.vercel.app"  // Для всех поддоменов Vercel (если меняешь имя)
+    ],
+    "method": [
+      "GET",
+      "PUT",
+      "POST",
+      "DELETE",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "Access-Control-Allow-Origin",
+      "Authorization",
+      "X-Requested-With",
+      "*"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
