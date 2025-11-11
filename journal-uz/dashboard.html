@@ -17,53 +17,55 @@
     <div id="submissionsList" class="row"></div>
   </div>
 
-  <!-- ✅ ИСПРАВЛЕННЫЙ СКРИПТ: Добавлены query, orderBy, getDocs; config внутри -->
+  <!-- Supabase SDK через CDN -->
   <script type="module">
-    // Полные импорты (расширенные для dashboard)
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js';
-    import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';  // Твой config
 
-    // ✅ ВСТАВЬ СВОЙ CONFIG ЗДЕСЬ (тот же, что в submit.html)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",  // Твой apiKey!
-      authDomain: "journal-uz.firebaseapp.com",
-      projectId: "journal-uz",
-      storageBucket: "journal-uz.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abc123def456"
-    };
-
-    // Инициализация
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    console.log('Firebase готов в dashboard.html!');  // Тест
+    // Инициализация Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Supabase готов!');
 
     async function loadSubmissions() {
-      // ✅ Теперь query/orderBy/getDocs импортированы
-      const q = query(collection(db, 'submissions'), orderBy('submittedAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const list = document.getElementById('submissionsList');
-      list.innerHTML = '';
+      try {
+        // Выборка из submissions (сортировка по submitted_at desc, фильтр по author_id если нужно)
+        const { data: submissions, error } = await supabase
+          .from('submissions')
+          .select('*')
+          .order('submitted_at', { ascending: false });  // Новые сверху
 
-      snapshot.forEach((doc) => {  // Исправил: docSnap → doc
-        const data = doc.data();
-        const card = `
-          <div class="col-md-6 mb-3">
-            <div class="card">
-              <div class="card-body">
-                <h5>${data.title}</h5>
-                <p>Авторы: ${data.authors}</p>
-                <p>Статус: <span class="badge bg-${data.status === 'Опубликована' ? 'success' : 'warning'}">${data.status}</span></p>
-                <a href="${data.fileURL}" class="btn btn-sm btn-secondary">Скачать PDF</a>
+        if (error) throw error;
+
+        const list = document.getElementById('submissionsList');
+        list.innerHTML = '';
+
+        submissions.forEach((item) => {
+          const statusBadge = item.status === 'Опубликована' ? 'bg-success' : 'bg-warning';
+          const card = `
+            <div class="col-md-6 mb-3">
+              <div class="card">
+                <div class="card-body">
+                  <h5>${item.title}</h5>
+                  <p>Авторы: ${item.authors}</p>
+                  <p>Статус: <span class="badge ${statusBadge}">${item.status}</span></p>
+                  <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-secondary">Скачать PDF</a>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-        list.innerHTML += card;
-      });
+          `;
+          list.innerHTML += card;
+        });
+
+        if (submissions.length === 0) {
+          list.innerHTML = '<p class="col-12">Нет поданных статей.</p>';
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById('submissionsList').innerHTML = '<p class="col-12">Ошибка загрузки: ' + error.message + '</p>';
+      }
     }
 
-    loadSubmissions();
+    loadSubmissions();  // Загрузка при открытии страницы
   </script>
 </body>
 </html>
