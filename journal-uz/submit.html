@@ -55,6 +55,7 @@
         window.location.href = 'login.html';
         return;
       }
+      console.log('Session user ID:', session.user.id);  // Дебаг: проверь UUID в консоли
       document.getElementById('logoutBtn').style.display = 'block';
       document.getElementById('logoutBtn').addEventListener('click', async () => {
         await supabase.auth.signOut();
@@ -77,7 +78,11 @@
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Сессия истекла — войдите заново');
+      if (!session) {
+        alert('Сессия истекла — войдите заново');
+        window.location.href = 'login.html';
+        return;
+      }
 
       try {
         const fileName = `${Date.now()}_${file.name}`;
@@ -91,6 +96,7 @@
           .from('submissions')
           .getPublicUrl(fileName);
 
+        // Insert с проверкой RLS
         const { data, error: insertError } = await supabase
           .from('submissions')
           .insert([
@@ -101,18 +107,21 @@
               file_url: publicUrl,
               status: 'Подана',
               submitted_at: new Date().toISOString(),
-              author_id: session.user.id
+              author_id: session.user.id  // UUID из сессии
             }
           ])
           .select();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('RLS Error:', insertError);  // Дебаг в консоли
+          throw insertError;
+        }
 
         alert('Статья подана!');
         window.location.href = 'dashboard.html';
       } catch (error) {
         console.error(error);
-        alert('Ошибка: ' + error.message);
+        alert('Ошибка: ' + error.message + ' (проверьте консоль для деталей)');
       }
     });
   </script>
