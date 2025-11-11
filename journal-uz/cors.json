@@ -2,7 +2,7 @@
   {
     "origin": [
       "https://journal-uz-dcj7.vercel.app",
-      "https://*.vercel.app"  // Для всех поддоменов Vercel (если меняешь имя)
+      "https://*.vercel.app" 
     ],
     "method": [
       "GET",
