@@ -10,6 +10,9 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
       <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <div class="navbar-nav ms-auto">
+        <button class="btn btn-outline-light" id="logoutBtn" style="display: none;">Выйти</button>
+      </div>
     </div>
   </nav>
   <div class="container mt-5">
@@ -46,6 +49,21 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase готов!');
 
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      document.getElementById('logoutBtn').style.display = 'block';
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'login.html';
+      });
+    }
+
+    checkSession();
+
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('title').value;
@@ -58,25 +76,21 @@
         return;
       }
 
-      try {
-        // Анонимный auth для RLS (если включён; генерирует temp UUID)
-        const { data: { user } } = await supabase.auth.signInAnonymously();
-        if (!user) throw new Error('Анонимный логин не удался');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Сессия истекла — войдите заново');
 
-        // Загрузка файла (фикс: путь без префикса "submissions/", чтобы избежать двойного)
+      try {
         const fileName = `${Date.now()}_${file.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('submissions')  // Bucket
+          .from('submissions')
           .upload(fileName, file, { upsert: true });
 
         if (uploadError) throw uploadError;
 
-        // Получить публичный URL
         const { data: { publicUrl } } = supabase.storage
           .from('submissions')
           .getPublicUrl(fileName);
 
-        // Вставка в таблицу (author_id = temp UUID от анонимного пользователя)
         const { data, error: insertError } = await supabase
           .from('submissions')
           .insert([
@@ -87,14 +101,14 @@
               file_url: publicUrl,
               status: 'Подана',
               submitted_at: new Date().toISOString(),
-              author_id: user.id  // UUID от анонимного auth
+              author_id: session.user.id
             }
           ])
           .select();
 
         if (insertError) throw insertError;
 
-        alert('Статья подана! Статус: Подана');
+        alert('Статья подана!');
         window.location.href = 'dashboard.html';
       } catch (error) {
         console.error(error);
