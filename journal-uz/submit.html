@@ -39,30 +39,15 @@
     </div>
   </div>
 
-  <!-- ✅ ИСПРАВЛЕННЫЙ СКРИПТ: Config внутри, без src -->
+  <!-- Supabase SDK через CDN -->
   <script type="module">
-    // Полные импорты (без 'firebase/app')
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js';
-    import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js';
-    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.5.0/firebase-storage.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';  // Твой config
 
-    // ✅ ВСТАВЬ СВОЙ CONFIG ЗДЕСЬ (из Firebase Console)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",  // Твой apiKey!
-      authDomain: "journal-uz.firebaseapp.com",
-      projectId: "journal-uz",
-      storageBucket: "journal-uz.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abc123def456"
-    };
+    // Инициализация Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Supabase готов!');
 
-    // Инициализация
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
-    console.log('Firebase готов в submit.html!');  // Тест
-
-    // Обработка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('title').value;
@@ -76,21 +61,36 @@
       }
 
       try {
-        // Загрузка файла
-        const fileRef = ref(storage, `submissions/${Date.now()}_${file.name}`);
-        await uploadBytes(fileRef, file);
-        const fileURL = await getDownloadURL(fileRef);
+        // Загрузка файла в Supabase Storage (bucket 'submissions')
+        const fileName = `submissions/${Date.now()}_${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('submissions')  // Название твоего bucket
+          .upload(fileName, file, { upsert: true });
 
-        // Сохранение в DB
-        await addDoc(collection(db, 'submissions'), {
-          title,
-          authors,
-          abstract,
-          fileURL,
-          status: 'Подана',
-          submittedAt: new Date(),
-          authorId: 'temp-user' // Замени на реальный UID после логина
-        });
+        if (uploadError) throw uploadError;
+
+        // Получить публичный URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('submissions')
+          .getPublicUrl(fileName);
+
+        // Вставка в таблицу submissions
+        const { data, error: insertError } = await supabase
+          .from('submissions')
+          .insert([
+            {
+              title,
+              authors,
+              abstract,
+              file_url: publicUrl,
+              status: 'Подана',
+              submitted_at: new Date().toISOString(),
+              author_id: 'temp-user'  // Замени на реальный UUID после логина
+            }
+          ])
+          .select();  // Возвращает вставленную запись
+
+        if (insertError) throw insertError;
 
         alert('Статья подана! Статус: Подана');
         window.location.href = 'dashboard.html';
