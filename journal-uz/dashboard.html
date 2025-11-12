@@ -39,6 +39,22 @@
         await supabase.auth.signOut();
         window.location.href = 'login.html';
       });
+
+      // Загружаем профиль здесь (session в scope)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          document.querySelector('h2').innerHTML += `<br><small>Привет, ${profile.full_name}! Роль: ${profile.role}</small>`;
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки профиля:', error);
+      }
+
       loadSubmissions(session.user.id);  // Загрузка с user.id
     }
 
@@ -79,15 +95,6 @@
         console.error(error);
         document.getElementById('submissionsList').innerHTML = '<p class="col-12">Ошибка: ' + error.message + '</p>';
       }
-      const { data: profile } = await supabase
-  .from('profiles')
-  .select('full_name, role')
-  .eq('id', session.user.id)
-  .single();
-
-if (profile) {
-  document.querySelector('h2').innerHTML += `<br><small>Привет, ${profile.full_name}! Роль: ${profile.role}</small>`;
-}
     }
 
     checkSession();
