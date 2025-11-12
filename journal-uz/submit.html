@@ -123,18 +123,6 @@
         console.error(error);
         alert('Ошибка: ' + error.message + ' (проверьте консоль для деталей)');
       }
-      const { data, error: insertError } = await supabase
-  .from('submissions')
-  .insert([{
-    title,
-    authors,
-    abstract,
-    file_url: publicUrl,
-    status: 'Подана',
-    submitted_at: new Date().toISOString(),
-    author_id: session.user.id  // UUID из auth, совпадает с profiles.id
-  }])
-  .select();
     });
   </script>
 </body>
