@@ -10,6 +10,9 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
       <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <div class="navbar-nav ms-auto">
+        <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
+      </div>
     </div>
   </nav>
   <div class="container mt-5">
@@ -17,40 +20,72 @@
     <div id="reviewsList" class="row"></div>
   </div>
 
-  <script type="module" src="firebase-config.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { firebaseConfig } from './firebase-config.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile || profile.role !== 'reviewer') {
+        alert('Доступ запрещён! (Требуется роль рецензента)');
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'login.html';
+      });
+
+      loadReviews();
+    }
 
     async function loadReviews() {
-      const q = query(collection(db, 'submissions'), where('status', '==', 'На рецензии'));
-      const snapshot = await getDocs(q);
+      const { data: submissions, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('status', 'На рецензии')
+        .order('submitted_at', { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
       const list = document.getElementById('reviewsList');
       list.innerHTML = '';
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      submissions.forEach((item) => {
         const card = `
           <div class="col-md-6 mb-3">
             <div class="card">
               <div class="card-body">
-                <h5>${data.title}</h5>
-                <a href="${data.fileURL}" target="_blank" class="btn btn-sm btn-info">Открыть PDF</a>
+                <h5>${item.title}</h5>
+                <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-info">Открыть PDF</a>
                 <form class="mt-2">
-                  <textarea class="form-control" placeholder="Ваш отзыв" id="review-${doc.id}"></textarea>
-                  <select class="form-select mt-2" id="score-${doc.id}">
-                    <option>Балл: 1-5</option>
+                  <textarea class="form-control" placeholder="Ваш отзыв" id="review-${item.id}"></textarea>
+                  <select class="form-select mt-2" id="score-${item.id}">
+                    <option value="">Балл: 1-5</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                     <option value="5">5</option>
                   </select>
-                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${doc.id}')">Отправить отзыв</button>
+                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${item.id}')">Отправить отзыв</button>
                 </form>
               </div>
             </div>
@@ -61,11 +96,35 @@
     }
 
     window.submitReview = async (id) => {
-      // Здесь добавь сохранение отзыва в DB (reviews collection)
-      alert('Отзыв отправлен! (Добавь код сохранения)');
+      const reviewText = document.getElementById(`review-${id}`).value;
+      const score = document.getElementById(`score-${id}`).value;
+
+      if (!reviewText || !score) {
+        alert('Заполните отзыв и балл!');
+        return;
+      }
+
+      // Сохраняем в новую таблицу reviews (создай её аналогично: id, submission_id, reviewer_id, review, score)
+      const { data: { session } } = await supabase.auth.getSession();
+      const { error } = await supabase
+        .from('reviews')  // Создай таблицу reviews в SQL: id, submission_id, reviewer_id, review, score, created_at
+        .insert([{
+          submission_id: id,
+          reviewer_id: session.user.id,
+          review: reviewText,
+          score: parseInt(score),
+          created_at: new Date().toISOString()
+        }]);
+
+      if (error) {
+        alert('Ошибка: ' + error.message);
+      } else {
+        alert('Отзыв отправлен!');
+        // Опционально: обнови статус статьи
+      }
     };
 
-    loadReviews();
+    checkSession();
   </script>
 </body>
 </html>
