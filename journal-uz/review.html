@@ -62,11 +62,17 @@
 
       if (error) {
         console.error(error);
+        document.getElementById('reviewsList').innerHTML = '<p class="col-12">Ошибка загрузки: ' + error.message + '</p>';
         return;
       }
 
       const list = document.getElementById('reviewsList');
       list.innerHTML = '';
+
+      if (submissions.length === 0) {
+        list.innerHTML = '<p class="col-12">Нет статей на рецензию.</p>';
+        return;
+      }
 
       submissions.forEach((item) => {
         const card = `
@@ -95,6 +101,7 @@
       });
     }
 
+    // Global для onclick
     window.submitReview = async (id) => {
       const reviewText = document.getElementById(`review-${id}`).value;
       const score = document.getElementById(`score-${id}`).value;
@@ -104,10 +111,9 @@
         return;
       }
 
-      // Сохраняем в новую таблицу reviews (создай её аналогично: id, submission_id, reviewer_id, review, score)
       const { data: { session } } = await supabase.auth.getSession();
       const { error } = await supabase
-        .from('reviews')  // Создай таблицу reviews в SQL: id, submission_id, reviewer_id, review, score, created_at
+        .from('reviews')
         .insert([{
           submission_id: id,
           reviewer_id: session.user.id,
@@ -120,7 +126,9 @@
         alert('Ошибка: ' + error.message);
       } else {
         alert('Отзыв отправлен!');
-        // Опционально: обнови статус статьи
+        // Опционально: очистить форму или обновить список
+        document.getElementById(`review-${id}`).value = '';
+        document.getElementById(`score-${id}`).value = '';
       }
     };
 
