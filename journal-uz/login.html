@@ -63,40 +63,41 @@
       try {
         let data, error;
         if (isLogin) {
-          // Вход (деструктуризация прямо в await — фикс ошибки)
+          // Вход
           ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
         } else {
           // Регистрация
           ({ data, error } = await supabase.auth.signUp({ email, password }));
-          if (data.user) alert('Проверьте email для подтверждения (если включено)');
+          if (data.user && !error) {
+            alert('Проверьте email для подтверждения (если включено)');
+          }
         }
 
         if (error) throw error;
 
         if (data.user) {
+          // Проверяем сессию (для регистрации может быть задержка)
+          await supabase.auth.getSession();  // Обновляем сессию
+
           alert(isLogin ? 'Вход успешен!' : 'Регистрация успешна!');
-          window.location.href = 'dashboard.html';  // Redirect на дашборд
+
+          // Проверяем, заполнено ли имя
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', data.user.id)
+            .single();
+
+          if (!profile || !profile.full_name) {
+            window.location.href = 'profile.html';  // На заполнение имени
+          } else {
+            window.location.href = 'dashboard.html';
+          }
         }
       } catch (error) {
         console.error(error);
         alert('Ошибка: ' + error.message);
       }
-      if (data.user) {
-  alert(isLogin ? 'Вход успешен!' : 'Регистрация успешна!');
-  
-  // Проверяем, заполнено ли имя
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', data.user.id)
-    .single();
-  
-  if (!profile || !profile.full_name) {
-    window.location.href = 'profile.html';  // На заполнение имени
-  } else {
-    window.location.href = 'dashboard.html';
-  }
-}
     });
   </script>
 </body>
