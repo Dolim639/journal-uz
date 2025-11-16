@@ -63,27 +63,27 @@
         window.location.href = 'login.html';
       });
 
-      await loadStats();  // Await, чтобы статистика загрузилась первой
+      await loadStats();
       loadAdmin();
     }
 
-    // Загрузка статистики (фикс: без groupBy, отдельные запросы)
+    // Статистика: Один запрос + JS count
     async function loadStats() {
+      const { data: submissions } = await supabase
+        .from('submissions')
+        .select('status');
+
+      const stats = submissions.reduce((acc, item) => {
+        acc[item.status] = (acc[item.status] || 0) + 1;
+        return acc;
+      }, {});
+
       const statuses = ['Подана', 'На рецензии', 'Принята', 'Отклонена', 'Опубликована'];
       const statsDiv = document.getElementById('stats');
-      statsDiv.innerHTML = '';  // Очистка
+      statsDiv.innerHTML = '';
 
-      for (const status of statuses) {
-        const { count, error } = await supabase
-          .from('submissions')
-          .select('*', { count: 'exact', head: true })  // head: true для count без данных
-          .eq('status', status);
-
-        if (error) {
-          console.error('Ошибка статы:', error);
-          continue;
-        }
-
+      statuses.forEach(status => {
+        const count = stats[status] || 0;
         const badgeClass = status === 'Подана' ? 'text-primary' : 
                           status === 'На рецензии' ? 'text-warning' : 
                           status === 'Принята' ? 'text-success' : 
@@ -100,10 +100,10 @@
           </div>
         `;
         statsDiv.innerHTML += card;
-      }
+      });
     }
 
-    // Загрузка списка с пагинацией
+    // Загрузка списка (оптимизировано)
     async function loadAdmin() {
       const from = (currentPage - 1) * pageSize;
       const { data: submissions, error, count } = await supabase
@@ -118,7 +118,7 @@
         return;
       }
 
-      // Пагинация UI
+      // Пагинация
       const totalPages = Math.ceil(count / pageSize);
       document.getElementById('pageInfo').textContent = `Страница ${currentPage} из ${totalPages || 1}`;
       document.getElementById('prevBtn').disabled = currentPage === 1;
@@ -127,43 +127,35 @@
       document.getElementById('prevBtn').onclick = () => { currentPage--; loadAdmin(); };
       document.getElementById('nextBtn').onclick = () => { currentPage++; loadAdmin(); };
 
-      // Загрузка рецензентов (если нет — покажем placeholder)
-      const { data: reviewers, error: reviewersError } = await supabase
+      // Один запрос для рецензентов
+      const { data: reviewers } = await supabase
         .from('profiles')
         .select('id, full_name')
         .eq('role', 'reviewer');
-
-      if (reviewersError) {
-        console.error('Ошибка загрузки рецензентов:', reviewersError);
-      }
 
       const list = document.getElementById('adminList');
       list.innerHTML = '';
 
       for (const item of submissions || []) {
-        // Отзывы для этой статьи
-        const { data: reviews, error: reviewsError } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('submission_id', item.id);
-
-        if (reviewsError) {
-          console.error('Ошибка отзывов:', reviewsError);
+        // Отзывы: Только если на рецензии (оптимизация)
+        let reviewsHtml = '<p class="text-muted mt-2">Нет отзывов</p>';
+        if (item.status === 'На рецензии') {
+          const { data: reviews } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('submission_id', item.id);
+          if (reviews && reviews.length > 0) {
+            reviewsHtml = `<details class="mt-2"><summary>Отзывы (${reviews.length})</summary><ul class="list-unstyled">${reviews.map(r => `<li><strong>${r.score}/5:</strong> ${r.review}</li>`).join('')}</ul></details>`;
+          }
         }
 
-        // Опции рецензентов (если нет — сообщение)
-        let reviewerOptions = '';
+        // Рецензенты
+        let reviewerOptions = '<option value="">Нет рецензентов</option>';
         if (reviewers && reviewers.length > 0) {
           reviewerOptions = reviewers.map(r => 
             `<option value="${r.id}" ${item.reviewer_id === r.id ? 'selected' : ''}>${r.full_name || 'Без имени'}</option>`
           ).join('');
-        } else {
-          reviewerOptions = '<option value="">Нет рецензентов (создайте в profiles)</option>';
         }
-
-        const reviewsHtml = (reviews && reviews.length > 0) ? 
-          `<details class="mt-2"><summary>Отзывы (${reviews.length})</summary><ul class="list-unstyled">${reviews.map(r => `<li><strong>${r.score}/5:</strong> ${r.review}</li>`).join('')}</ul></details>` : 
-          '<p class="text-muted mt-2">Нет отзывов</p>';
 
         const card = `
           <div class="col-md-12 mb-3">
@@ -173,14 +165,12 @@
                 <p class="mb-1"><small>Авторы: ${item.authors}</small></p>
                 <p class="mb-2">Статус: <span class="badge bg-secondary">${item.status}</span></p>
                 
-                <!-- Назначение рецензента -->
                 <div class="mb-2">
                   <label class="form-label">Рецензент:</label>
                   <select id="reviewer-${item.id}" class="form-select d-inline w-auto me-2">${reviewerOptions}</select>
                   <button class="btn btn-sm btn-info" onclick="assignReviewer('${item.id}')">Назначить</button>
                 </div>
                 
-                <!-- Изменение статуса -->
                 <div class="mb-2">
                   <label class="form-label">Статус:</label>
                   <select id="status-${item.id}" class="form-select d-inline w-auto me-2" onchange="updateStatus('${item.id}', this.value)">
@@ -192,15 +182,12 @@
                   </select>
                 </div>
                 
-                <!-- Предпросмотр PDF (фикс: большее окно + allow fullscreen) -->
                 <div class="mb-2">
                   <label class="form-label">PDF:</label>
                   <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-secondary me-2">Скачать</a>
-                  <button class="btn btn-sm btn-outline-primary" onclick="window.open('${item.file_url}', '_blank')">Открыть полноэкранно</button>
                   <iframe src="${item.file_url}" class="w-100 mt-2" height="500" style="border:1px solid #ccc; border-radius: 0.375rem;" allow="fullscreen"></iframe>
                 </div>
                 
-                <!-- Отзывы -->
                 ${reviewsHtml}
               </div>
             </div>
@@ -214,7 +201,6 @@
       }
     }
 
-    // Обновление статуса
     window.updateStatus = async (id, status) => {
       const { error } = await supabase
         .from('submissions')
@@ -225,12 +211,11 @@
         alert('Ошибка: ' + error.message);
       } else {
         alert('Статус обновлён!');
-        await loadStats();  // Перезагрузка статы
+        await loadStats();
         loadAdmin();
       }
     };
 
-    // Назначение рецензента
     window.assignReviewer = async (id) => {
       const reviewerSelect = document.getElementById(`reviewer-${id}`);
       const reviewerId = reviewerSelect.value;
@@ -249,7 +234,7 @@
         alert('Ошибка: ' + error.message);
       } else {
         alert('Рецензент назначен!');
-        loadAdmin();  // Перезагрузка для обновления selected
+        loadAdmin();
       }
     };
 
