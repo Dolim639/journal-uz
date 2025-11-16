@@ -74,37 +74,60 @@
         return;
       }
 
-      submissions.forEach((item) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const reviewerId = session.user.id;
+
+      for (const item of submissions) {
+        // Fetch своего отзыва (оптимизация: только для этого рецензента)
+        const { data: myReview } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('submission_id', item.id)
+          .eq('reviewer_id', reviewerId)
+          .single();  // single — если есть, вернёт один
+
+        const isReviewed = !!myReview;  // Есть отзыв?
+        const buttonText = isReviewed ? 'Обновить отзыв' : 'Отправить отзыв';
+        const textareaValue = myReview ? myReview.review : '';
+        const selectValue = myReview ? myReview.score.toString() : '';
+
         const card = `
-          <div class="col-md-6 mb-3">
+          <div class="col-md-12 mb-3">
             <div class="card">
               <div class="card-body">
                 <h5>${item.title}</h5>
-                <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-info">Открыть PDF</a>
+                <p class="mb-2">Авторы: ${item.authors}</p>
+                <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-info mb-2">Открыть PDF</a>
+                
                 <form class="mt-2">
-                  <textarea class="form-control" placeholder="Ваш отзыв" id="review-${item.id}"></textarea>
-                  <select class="form-select mt-2" id="score-${item.id}">
-                    <option value="">Балл: 1-5</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
+                  <label class="form-label">Ваш отзыв:</label>
+                  <textarea class="form-control" id="review-${item.id}" placeholder="Ваш отзыв" rows="4">${textareaValue}</textarea>
+                  
+                  <label class="form-label mt-2">Балл (1-5):</label>
+                  <select class="form-select" id="score-${item.id}">
+                    <option value="">Выберите балл</option>
+                    <option value="1" ${selectValue === '1' ? 'selected' : ''}>1</option>
+                    <option value="2" ${selectValue === '2' ? 'selected' : ''}>2</option>
+                    <option value="3" ${selectValue === '3' ? 'selected' : ''}>3</option>
+                    <option value="4" ${selectValue === '4' ? 'selected' : ''}>4</option>
+                    <option value="5" ${selectValue === '5' ? 'selected' : ''}>5</option>
                   </select>
-                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${item.id}')">Отправить отзыв</button>
+                  
+                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${item.id}', ${isReviewed ? `'${myReview.id}'` : 'null'})">${buttonText}</button>
+                  ${isReviewed ? `<small class="text-muted d-block mt-1">Отзыв уже оставлен. Вы можете отредактировать.</small>` : ''}
                 </form>
               </div>
             </div>
           </div>
         `;
         list.innerHTML += card;
-      });
+      }
     }
 
-    // Global для onclick
-    window.submitReview = async (id) => {
-      const reviewText = document.getElementById(`review-${id}`).value;
-      const score = document.getElementById(`score-${id}`).value;
+    // Функция отправки/обновления отзыва
+    window.submitReview = async (submissionId, existingReviewId = null) => {
+      const reviewText = document.getElementById(`review-${submissionId}`).value.trim();
+      const score = document.getElementById(`score-${submissionId}`).value;
 
       if (!reviewText || !score) {
         alert('Заполните отзыв и балл!');
@@ -112,23 +135,61 @@
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      const { error } = await supabase
-        .from('reviews')
-        .insert([{
-          submission_id: id,
-          reviewer_id: session.user.id,
-          review: reviewText,
-          score: parseInt(score),
-          created_at: new Date().toISOString()
-        }]);
+      const reviewerId = session.user.id;
+      const scoreInt = parseInt(score);
 
-      if (error) {
-        alert('Ошибка: ' + error.message);
-      } else {
-        alert('Отзыв отправлен!');
-        // Опционально: очистить форму или обновить список
-        document.getElementById(`review-${id}`).value = '';
-        document.getElementById(`score-${id}`).value = '';
+      try {
+        let error;
+        if (existingReviewId) {
+          // Обновление существующего
+          const { error: updateError } = await supabase
+            .from('reviews')
+            .update({
+              review: reviewText,
+              score: scoreInt,
+              created_at: new Date().toISOString()  // Обновляем дату
+            })
+            .eq('id', existingReviewId);
+
+          error = updateError;
+        } else {
+          // Новый отзыв
+          const { error: insertError } = await supabase
+            .from('reviews')
+            .insert([{
+              submission_id: submissionId,
+              reviewer_id: reviewerId,
+              review: reviewText,
+              score: scoreInt,
+              created_at: new Date().toISOString()
+            }]);
+
+          error = insertError;
+        }
+
+        if (error) {
+          alert('Ошибка: ' + error.message);
+          return;
+        }
+
+        // Авто-обновление статуса (если score >=4 — 'Принята')
+        let newStatus = 'На рецензии';
+        if (scoreInt >= 4) {
+          newStatus = 'Принята';
+          const { error: statusError } = await supabase
+            .from('submissions')
+            .update({ status: newStatus })
+            .eq('id', submissionId);
+
+          if (statusError) console.error('Ошибка обновления статуса:', statusError);
+        }
+
+        alert(`Отзыв ${existingReviewId ? 'обновлён' : 'отправлен'}! Статус статьи: ${newStatus}`);
+        loadReviews();  // Перезагрузка списка
+
+      } catch (err) {
+        console.error(err);
+        alert('Ошибка: ' + err.message);
       }
     };
 
