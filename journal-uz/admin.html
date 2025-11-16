@@ -17,6 +17,17 @@
   </nav>
   <div class="container mt-5">
     <h2>Управление статьями</h2>
+    
+    <!-- Статистика -->
+    <div id="stats" class="row mb-4"></div>
+    
+    <!-- Пагинация -->
+    <div class="d-flex justify-content-between mb-3">
+      <button class="btn btn-secondary" id="prevBtn" disabled>Предыдущая</button>
+      <span id="pageInfo">Страница 1</span>
+      <button class="btn btn-secondary" id="nextBtn">Следующая</button>
+    </div>
+    
     <div id="adminList" class="row"></div>
   </div>
 
@@ -25,6 +36,8 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    let currentPage = 1;
+    const pageSize = 10;
 
     async function checkSession() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -50,45 +63,152 @@
         window.location.href = 'login.html';
       });
 
+      loadStats();
       loadAdmin();
     }
 
-    async function loadAdmin() {
-      const { data: submissions, error } = await supabase
+    // Загрузка статистики
+    async function loadStats() {
+      const { data: stats } = await supabase
         .from('submissions')
-        .select('*')
-        .order('submitted_at', { ascending: false });
+        .select('status, count(*)')
+        .groupBy('status');
+
+      const statsDiv = document.getElementById('stats');
+      statsDiv.innerHTML = `
+        <div class="col-md-2">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5>Подана</h5>
+              <p class="text-primary">${stats.filter(s => s.status === 'Подана').length || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5>На рецензии</h5>
+              <p class="text-warning">${stats.filter(s => s.status === 'На рецензии').length || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5>Принята</h5>
+              <p class="text-success">${stats.filter(s => s.status === 'Принята').length || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5>Отклонена</h5>
+              <p class="text-danger">${stats.filter(s => s.status === 'Отклонена').length || 0}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5>Опубликована</h5>
+              <p class="text-info">${stats.filter(s => s.status === 'Опубликована').length || 0}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Загрузка списка с пагинацией
+    async function loadAdmin() {
+      const from = (currentPage - 1) * pageSize;
+      const { data: submissions, error, count } = await supabase
+        .from('submissions')
+        .select('*', { count: 'exact' })
+        .order('submitted_at', { ascending: false })
+        .range(from, from + pageSize - 1);
 
       if (error) {
         console.error(error);
         return;
       }
 
+      // Пагинация UI
+      const totalPages = Math.ceil(count / pageSize);
+      document.getElementById('pageInfo').textContent = `Страница ${currentPage} из ${totalPages}`;
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === totalPages;
+
+      document.getElementById('prevBtn').onclick = () => { currentPage--; loadAdmin(); };
+      document.getElementById('nextBtn').onclick = () => { currentPage++; loadAdmin(); };
+
+      // Загрузка рецензентов
+      const { data: reviewers } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'reviewer');
+
       const list = document.getElementById('adminList');
       list.innerHTML = '';
 
-      submissions.forEach((item) => {
+      for (const item of submissions) {
+        // Отзывы для этой статьи
+        const { data: reviews } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('submission_id', item.id);
+
+        const reviewerOptions = reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id === r.id ? 'selected' : ''}>${r.full_name}</option>`).join('');
+
+        const reviewsHtml = reviews.length > 0 ? 
+          `<details><summary>Отзывы (${reviews.length})</summary><ul>${reviews.map(r => `<li>${r.review} (Балл: ${r.score})</li>`).join('')}</ul></details>` : 
+          '<p>Нет отзывов</p>';
+
         const card = `
-          <div class="col-md-6 mb-3">
+          <div class="col-md-12 mb-3">
             <div class="card">
               <div class="card-body">
                 <h5>${item.title}</h5>
-                <p>Статус: ${item.status}</p>
-                <select onchange="updateStatus('${item.id}', this.value)">
-                  <option ${item.status === 'Подана' ? 'selected' : ''}>Подана</option>
-                  <option ${item.status === 'На рецензии' ? 'selected' : ''}>На рецензии</option>
-                  <option ${item.status === 'Принята' ? 'selected' : ''}>Принята</option>
-                  <option ${item.status === 'Отклонена' ? 'selected' : ''}>Отклонена</option>
-                  <option ${item.status === 'Опубликована' ? 'selected' : ''}>Опубликована</option>
-                </select>
+                <p>Авторы: ${item.authors}</p>
+                <p>Статус: <span class="badge bg-secondary">${item.status}</span></p>
+                
+                <!-- Назначение рецензента -->
+                <div class="mb-2">
+                  <label>Рецензент:</label>
+                  <select id="reviewer-${item.id}" class="form-select d-inline w-auto">${reviewerOptions}</select>
+                  <button class="btn btn-sm btn-info ms-2" onclick="assignReviewer('${item.id}')">Назначить</button>
+                </div>
+                
+                <!-- Изменение статуса -->
+                <div class="mb-2">
+                  <label>Статус:</label>
+                  <select id="status-${item.id}" class="form-select d-inline w-auto" onchange="updateStatus('${item.id}', this.value)">
+                    <option ${item.status === 'Подана' ? 'selected' : ''}>Подана</option>
+                    <option ${item.status === 'На рецензии' ? 'selected' : ''}>На рецензии</option>
+                    <option ${item.status === 'Принята' ? 'selected' : ''}>Принята</option>
+                    <option ${item.status === 'Отклонена' ? 'selected' : ''}>Отклонена</option>
+                    <option ${item.status === 'Опубликована' ? 'selected' : ''}>Опубликована</option>
+                  </select>
+                </div>
+                
+                <!-- Предпросмотр PDF -->
+                <div class="mb-2">
+                  <label>PDF:</label>
+                  <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-secondary">Скачать</a>
+                  <iframe src="${item.file_url}" width="100%" height="300" class="mt-2" style="border:1px solid #ccc;"></iframe>
+                </div>
+                
+                <!-- Отзывы -->
+                <div class="mb-2">${reviewsHtml}</div>
               </div>
             </div>
           </div>
         `;
         list.innerHTML += card;
-      });
+      }
     }
 
+    // Обновление статуса
     window.updateStatus = async (id, status) => {
       const { error } = await supabase
         .from('submissions')
@@ -99,6 +219,23 @@
         alert('Ошибка: ' + error.message);
       } else {
         alert('Статус обновлён!');
+        loadStats();  // Перезагрузка статы
+        loadAdmin();
+      }
+    };
+
+    // Назначение рецензента
+    window.assignReviewer = async (id) => {
+      const reviewerId = document.getElementById(`reviewer-${id}`).value;
+      const { error } = await supabase
+        .from('submissions')
+        .update({ reviewer_id: reviewerId })
+        .eq('id', id);
+
+      if (error) {
+        alert('Ошибка: ' + error.message);
+      } else {
+        alert('Рецензент назначен!');
         loadAdmin();
       }
     };
