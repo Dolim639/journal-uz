@@ -183,3 +183,27 @@ body.index-page {
   #stats p { font-size: 1.6rem !important; }
   .card-header h3 { font-size: 1.4rem !important; }
 }
+/* === БЕЛЫЙ ФОН ТОЛЬКО ДЛЯ ГЛАВНОЙ СТРАНИЦЫ (index.html) === */
+body.index-page,
+body:has(#welcome-section) {   /* Дополнительная страховка на случай, если добавишь id */
+  background: var(--white) !important;           /* Белый фон */
+  background-image: none !important;
+  color: var(--dark-color);
+}
+
+/* Если хочешь лёгкую тень у карточек на белом фоне — чуть усилим */
+body.index-page .card,
+body:has(#welcome-section) .card {
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Опционально: чуть темнее текст на белом фоне для контраста */
+body.index-page h1,
+body.index-page h2,
+body.index-page p,
+body:has(#welcome-section) h1,
+body:has(#welcome-section) h2,
+body:has(#welcome-section) p {
+  color: #1e293b !important;  /* тёмно-серый */
+}
+
