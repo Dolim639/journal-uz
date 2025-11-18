@@ -440,6 +440,33 @@ body.bg-light {
   color: var(--primary-light);
 }
 
+.submission-page .container.mt-5 {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  max-width: 900px;
+}
+
+.submission-page .card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  backdrop-filter: blur(20px);
+}
+
+.submission-page .card-body {
+  background: transparent;
+}
+
+.submission-page .form-label,
+.submission-page .card-header h3 {
+  color: var(--white);
+}
+
+.submission-page .btn-primary {
+  box-shadow: none;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -618,8 +645,6 @@ body > a.nav-link {
     font-size: 1.5rem !important;
   }
 }
-
-
 
 
 
