@@ -93,6 +93,7 @@ body {
 .card-header h3 {
   margin: 0;
   font-size: 1.5rem;
+  color: var(--white);
 }
 
 .card-body {
@@ -411,6 +412,34 @@ body.bg-light {
   animation: fadeInUp 0.5s ease;
 }
 
+.login-page .container.mt-5 {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  max-width: 420px;
+}
+
+.login-page .card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  backdrop-filter: blur(20px);
+}
+
+.login-page .card-body {
+  background: transparent;
+}
+
+.login-page .form-label,
+.login-page #formTitle,
+.login-page .btn-link {
+  color: var(--white);
+}
+
+.login-page .btn-link:hover {
+  color: var(--primary-light);
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -589,61 +618,6 @@ body > a.nav-link {
     font-size: 1.5rem !important;
   }
 }
-/* === СТАТИСТИКА В ADMIN.HTML === */
-#stats .card {
-  border: none;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-  text-align: center;
-  padding: 1.5rem 1rem;
-  background: var(--white);
-  height: 100%;
-}
 
-#stats .card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-}
-
-#stats .card-body {
-  padding: 0.5rem 0;
-}
-
-#stats h6 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--gray-color);
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-#stats p {
-  font-size: 2rem !important;
-  font-weight: 700;
-  margin: 0;
-  line-height: 1;
-}
-
-/* Цвета для статусов */
-#stats .text-primary { color: var(--primary-color) !important; }
-#stats .text-warning { color: var(--warning-color) !important; }
-#stats .text-success { color: var(--success-color) !important; }
-#stats .text-danger { color: var(--danger-color) !important; }
-#stats .text-info { color: var(--info-color) !important; }
-
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-  #stats h6 {
-    font-size: 0.75rem;
-  }
-  #stats p {
-    font-size: 1.5rem !important;
-  }
-}
 
 
