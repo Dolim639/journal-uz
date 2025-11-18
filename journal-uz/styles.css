@@ -646,5 +646,85 @@ body > a.nav-link {
   }
 }
 
+/* === LOGIN.HTML — УБИРАЕМ БЕЛЫЙ КВАДРАТ, ОСТАВЛЯЕМ ТОЛЬКО ФОРМУ === */
+#authForm .card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+#authForm .card-header {
+  background: transparent !important;
+  border-bottom: none !important;
+  padding: 0 0 1.5rem 0 !important;
+  text-align: center;
+}
+
+#authForm .card-header h3 {
+  color: #ffffff !important;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+#authForm .card-body {
+  background: rgba(255, 255, 255, 0.92) !important;   /* Только внутренний блок формы белый */
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* === SUBMIT.HTML — ФИКС КНОПКИ ВЫБОРА ФАЙЛА === */
+/* Вариант 1: Красивая стандартная кнопка (рекомендую) */
+.custom-file-upload {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition);
+  box-shadow: var(--shadow);
+}
+
+.custom-file-upload:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+#file {
+  display: none; /* Прячем стандартный input */
+}
+
+#fileName {
+  margin-left: 1rem;
+  color: var(--gray-color);
+  font-style: italic;
+}
+
+/* Вариант 2: Кнопка со скрепкой (раскомментируй, если хочешь именно её) */
+/*
+#fileLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#fileLabel i {
+  font-size: 1.2rem;
+}
+*/
 
 
