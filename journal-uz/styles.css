@@ -589,11 +589,6 @@ body > a.nav-link {
     font-size: 1.5rem !important;
   }
 }
-
-
-
-
-
 /* === СТАТИСТИКА В ADMIN.HTML === */
 #stats .card {
   border: none;
@@ -650,7 +645,5 @@ body > a.nav-link {
     font-size: 1.5rem !important;
   }
 }
-
-
 
 
