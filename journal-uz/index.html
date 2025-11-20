@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Журнал UZ — Научный журнал Узбекистана</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -11,8 +11,22 @@
 </head>
 <body class="index-page">
 
+  <!-- Hero -->
+  <section class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 80vh; display: flex; align-items: center;">
+    <div class="container">
+      <h1 class="display-3 fw-bold text-white mb-4">Журнал UZ</h1>
+      <p class="lead text-white mb-3 opacity-90">
+        Научный рецензируемый журнал Узбекистана
+      </p>
+      <p class="fs-4 text-white col-lg-10 mx-auto opacity-85">
+        Публикация оригинальных научных статей в области естественных, технических и гуманитарных наук. 
+        Открытый доступ, двойное слепое рецензирование, индексация в международных базах.
+      </p>
+    </div>
+  </section>
 
   <div class="container my-5">
+    <!-- Поиск -->
     <div class="row mb-5">
       <div class="col-md-8 mx-auto">
         <div class="input-group input-group-lg shadow-sm">
@@ -23,14 +37,20 @@
     </div>
 
     <div class="row">
+      <!-- Теги -->
       <div class="col-lg-3 mb-5">
         <h5 class="fw-bold mb-3">Теги</h5>
         <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
       </div>
 
+      <!-- Все статьи (без "Популярные") -->
       <div class="col-lg-9">
         <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
         <div id="articlesList" class="row g-4"></div>
+        <div id="noResults" class="text-center text-muted py-5 d-none">
+          <i class="fas fa-book-open fa-3x mb-3"></i>
+          <p class="fs-5">Статьи не найдены</p>
+        </div>
       </div>
     </div>
   </div>
@@ -39,18 +59,15 @@
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    const supabase = createClient(supabaseUrl, supabaseKey); // КЛЮЧ ОБЯЗАТЕЛЕН!
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Загрузка тегов
     async function loadTags() {
-      const { data, error } = await supabase.from('tags').select('id, name').order('name');
-      if (error) {
-        console.error('Теги:', error);
-        return;
-      }
+      const { data: tags } = await supabase.from('tags').select('id, name').order('name');
       const cloud = document.getElementById('tagsCloud');
-      cloud.innerHTML = data.map(t => 
-        `<button class="btn btn-outline-primary btn-sm mb-2" onclick="filter('${t.name}')">${t.name}</button>`
-      ).join('') || '<small class="text-muted">Тегов нет</small>';
+      cloud.innerHTML = tags && tags.length > 0 
+        ? tags.map(t => `<button class="btn btn-outline-primary btn-sm mb-2" onclick="filter('${t.name}')">${t.name}</button>`).join('')
+        : '<small class="text-muted">Тегов пока нет</small>';
     }
 
     window.filter = (tag) => {
@@ -58,6 +75,7 @@
       loadArticles(tag);
     };
 
+    // Загрузка статей (все опубликованные, с поиском и тегами)
     async function loadArticles(query = '') {
       let sql = supabase.from('submissions')
         .select('id, title, authors, abstract, file_url, views, submitted_at')
@@ -66,17 +84,38 @@
 
       if (query) {
         const q = query.toLowerCase();
-        const { data: tagData } = await supabase.from('submission_tags')
-          .select('submission_id')
-          .eq('tag_id', (await supabase.from('tags').select('id').ilike('name', `%${q}%`).single()).data?.id || '');
-        const ids = tagData ? tagData.map(t => t.submission_id) : [];
-        sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%, id.in.(${ids.join(',') || 'null'})`);
+        const { data: tagData } = await supabase
+          .from('tags')
+          .select('id')
+          .ilike('name', `%${q}%`);
+
+        const tagIds = tagData ? tagData.map(t => t.id) : [];
+        let tagFilter = '';
+        if (tagIds.length > 0) {
+          const { data: linked } = await supabase
+            .from('submission_tags')
+            .select('submission_id')
+            .in('tag_id', tagIds);
+          const ids = linked ? linked.map(l => l.submission_id) : [];
+          tagFilter = ids.length > 0 ? `,id.in.(${ids.join(',')})` : '';
+        }
+
+        sql = sql.or(`title.ilike.%${q}%,abstract.ilike.%${q}%${tagFilter}`);
       }
 
       const { data: articles } = await sql;
 
       const list = document.getElementById('articlesList');
-      list.innerHTML = articles && articles.length > 0 ? articles.map(a => `
+      const noRes = document.getElementById('noResults');
+
+      if (!articles || articles.length === 0) {
+        list.innerHTML = '';
+        noRes.classList.remove('d-none');
+        return;
+      }
+
+      noRes.classList.add('d-none');
+      list.innerHTML = articles.map(a => `
         <div class="col-md-12 mb-4">
           <div class="card h-100 shadow-sm hover-shadow">
             <div class="card-body">
@@ -99,7 +138,7 @@
             </div>
           </div>
         </div>
-      `).join('') : '<p class="col-12 text-center text-muted">Нет опубликованных статей</p>';
+      `).join('');
     }
 
     window.incrementViews = async (id) => {
