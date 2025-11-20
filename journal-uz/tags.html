@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="-m">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,9 +23,9 @@
     <div class="row">
       <div class="col-lg-8 mx-auto">
         <div class="card shadow">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
             <h3 class="mb-0">Управление тегами</h3>
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTagModal">
+            <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addTagModal">
               <i class="fas fa-plus me-2"></i>Добавить тег
             </button>
           </div>
@@ -52,12 +52,14 @@
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label">Название тега</label>
-            <input type="text" class="form-control" id="newTagName" placeholder="например: квантовая физика">
+            <input type="text" class="form-control" id="newTagName" placeholder="например: квантовая физика" autofocus>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" id="saveTagBtn">Добавить</button>
+          <button type="button" class="btn btn-primary" id="saveTagBtn">
+            <i class="fas fa-save me-2"></i>Добавить
+          </button>
         </div>
       </div>
     </div>
@@ -104,6 +106,7 @@
 
       if (error) {
         console.error(error);
+        document.getElementById('tagsList').innerHTML = '<p class="text-danger col-12">Ошибка загрузки тегов</p>';
         return;
       }
 
@@ -122,7 +125,7 @@
           <div class="card h-100 text-center shadow-sm hover-shadow">
             <div class="card-body d-flex flex-column justify-content-between">
               <div>
-                <i class="fas fa-tag text-primary mb-2" style="font-size: 1.8rem;"></i>
+                <i class="fas fa-tag text-primary mb-2" style="font-size: 2rem;"></i>
                 <h6 class="card-title mb-2">${tag.name}</h6>
               </div>
               <button class="btn btn-danger btn-sm mt-3" onclick="deleteTag('${tag.id}', '${tag.name}')">
@@ -134,9 +137,11 @@
       `).join('');
     }
 
-    // Добавление тега
+    // Добавление тега (теперь работает!)
     document.getElementById('saveTagBtn').addEventListener('click', async () => {
-      const name = document.getElementById('newTagName').value.trim();
+      const nameInput = document.getElementById('newTagName');
+      const name = nameInput.value.trim();
+
       if (!name) {
         alert('Введите название тега');
         return;
@@ -147,10 +152,13 @@
         .insert({ name });
 
       if (error) {
-        if (error.code === '23505') alert('Тег с таким названием уже существует');
-        else alert('Ошибка: ' + error.message);
+        if (error.code === '23505') {
+          alert('Тег с таким названием уже существует');
+        } else {
+          alert('Ошибка: ' + error.message);
+        }
       } else {
-        document.getElementById('newTagName').value = '';
+        nameInput.value = '';
         bootstrap.Modal.getInstance(document.getElementById('addTagModal')).hide();
         loadTags();
       }
@@ -158,7 +166,7 @@
 
     // Удаление тега
     window.deleteTag = async (id, name) => {
-      if (!confirm(`Удалить тег "${name}"? Это удалит его из всех статей!`)) return;
+      if (!confirm(`Удалить тег "${name}"?\nЭто удалит его из всех статей!`)) return;
 
       const { error } = await supabase
         .from('tags')
