@@ -19,9 +19,7 @@
   </nav>
 
   <div class="container mt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 id="welcomeHeader">Ваши статьи</h2>
-    </div>
+    <h2 id="welcomeHeader">Ваши статьи</h2>
     <div id="submissionsList" class="row"></div>
   </div>
 
@@ -29,21 +27,21 @@
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    const DIAMOND = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     async function checkSession() {
-      const { data: { session } } = await DIAMOND.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         window.location.href = 'login.html';
         return;
       }
 
       document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await DIAMOND.auth.signOut();
+        await supabase.auth.signOut();
         window.location.href = 'login.html';
       });
 
-      const { data: profile } = await DIAMOND
+      const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, role')
         .eq('id', session.user.id)
@@ -53,7 +51,7 @@
         document.getElementById('welcomeHeader').innerHTML += 
           `<br><small class="text-muted">Привет, ${profile.full_name}! Роль: ${profile.role}</small>`;
 
-        // РЕДИРЕКТ ПО РОЛИ
+        // Редирект по ролям
         const path = window.location.pathname;
         if (profile.role === 'admin' && !path.includes('admin.html')) window.location.href = 'admin.html';
         if (profile.role === 'reviewer' && !path.includes('review.html')) window.location.href = 'review.html';
@@ -64,19 +62,30 @@
     }
 
     async function loadSubmissions(userId) {
-      const { data: submissions } = await DIAMOND
+      const { data: submissions, error } = await supabase
         .from('submissions')
         .select('id, title, authors, abstract, status, submitted_at, file_url, views')
         .eq('author_id', userId)
         .order('submitted_at', { ascending: false });
 
+      if (error) {
+        console.error(error);
+        document.getElementById('submissionsList').innerHTML = '<p class="col-12 text-danger">Ошибка загрузки статей</p>';
+        return;
+      }
+
       const list = document.getElementById('submissionsList');
-      list.innerHTML = submissions && submissions.length > 0 ? submissions.map(item => `
+      if (!submissions || submissions.length === 0) {
+        list.innerHTML = '<p class="col-12 text-center text-muted">У вас пока нет статей</p>';
+        return;
+      }
+
+      list.innerHTML = submissions.map(item => `
         <div class="col-md-6 mb-4">
           <div class="card h-100 shadow-sm">
             <div class="card-body">
               <h5 class="card-title">${item.title}</h5>
-              <p class="text-muted small">Авторы: ${item.authPOD.authors}</p>
+              <p class="text-muted small">Авторы: ${item.authors}</p> <!-- ИСПРАВЛЕНО: было authPOD -->
               <p class="card-text">${item.abstract.substring(0, 150)}...</p>
               <div class="mt-3 d-flex justify-content-between align-items-center">
                 <span class="badge ${item.status === 'Опубликована' ? 'bg-success' : 'bg-warning'}">${item.status}</span>
@@ -86,7 +95,7 @@
             </div>
           </div>
         </div>
-      `).join('') : '<p class="col-12 text-center text-muted">У вас пока нет статей</p>';
+      `).join('');
     }
 
     checkSession();
