@@ -6,8 +6,6 @@
   <title>Подача статьи</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <!-- Bootstrap Icons для скрепки -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-light">
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -24,34 +22,34 @@
       <div class="card-header"><h3>Подача статьи</h3></div>
       <div class="card-body">
         <form id="submitForm">
-          <div class="mb-4">
+          <div class="mb-3">
             <label class="form-label">Название статьи</label>
             <input type="text" class="form-control" id="title" required>
           </div>
 
-          <div class="mb-4">
+          <div class="mb-3">
             <label class="form-label">Авторы (через запятую)</label>
             <input type="text" class="form-control" id="authors" required>
           </div>
 
-          <div class="mb-4">
+          <div class="mb-3">
             <label class="form-label">Аннотация</label>
             <textarea class="form-control" id="abstract" rows="4" required></textarea>
           </div>
 
-          <!-- КРАСИВАЯ КНОПКА С ФАЙЛОМ -->
-          <div class="mb-4">
-            <label class="form-label">Файл (PDF, max 10MB)</label>
-            <div class="d-flex align-items-center gap-3">
-              <label for="file" class="btn btn-primary btn-lg d-flex align-items-center gap-2">
-                <i class="bi bi-paperclip fs-4"></i> Выбрать файл
-              </label>
-              <input type="file" id="file" accept=".pdf" required style="display: none;">
-              <span id="fileName" class="text-muted fs-6">Файл не выбран</span>
-            </div>
+          <!-- НОВОЕ ПОЛЕ: ТЕГИ -->
+          <div class="mb-3">
+            <label class="form-label">Теги (через запятую, например: физика, квантовая механика, эксперимент)</label>
+            <input type="text" class="form-control" id="tags" placeholder="математика, алгоритмы, машинное обучение">
+            <small class="text-muted">Теги помогут читателям найти вашу статью</small>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100">Отправить</button>
+          <div class="mb-3">
+            <label class="form-label">Файл (PDF, максимум 10 МБ)</label>
+            <input type="file" class="form-control" id="file" accept=".pdf" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg">Отправить статью</button>
         </form>
       </div>
     </div>
@@ -63,13 +61,6 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Показ имени файла
-    document.getElementById('file').addEventListener('change', function(e) {
-      const fileName = e.target.files.length > 0 ? e.target.files[0].name : 'Файл не выбран';
-      document.getElementById('fileName').textContent = fileName;
-    });
-
-    // Проверка сессии
     async function checkSession() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -77,29 +68,36 @@
         return;
       }
       document.getElementById('logoutBtn').style.display = 'block';
-      document.getElementById('logoutBtn').onclick = async () => {
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
         await supabase.auth.signOut();
         window.location.href = 'login.html';
-      };
+      });
     }
     checkSession();
 
-    // Отправка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const title = document.getElementById('title').value.trim();
       const authors = document.getElementById('authors').value.trim();
       const abstract = document.getElementById('abstract').value.trim();
+      const tagsInput = document.getElementById('tags').value.trim();
       const file = document.getElementById('file').files[0];
 
-      if (!file) return alert('Выберите PDF-файл!');
-      if (file.size > 10 * 1024 * 1024) return alert('Файл слишком большой! Максимум 10 МБ');
+      if (!file || file.size > 10 * 1024 * 1024) {
+        alert('Файл должен быть PDF и не больше 10 МБ!');
+        return;
+      }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return window.location.href = 'login.html';
+      if (!session) {
+        alert('Сессия истекла');
+        window.location.href = 'login.html';
+        return;
+      }
 
       try {
+        // 1. Загрузка файла
         const fileName = `${Date.now()}_${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('submissions')
@@ -111,7 +109,8 @@
           .from('submissions')
           .getPublicUrl(fileName);
 
-        const { error: insertError } = await supabase
+        // 2. Сохранение статьи
+        const { data: submission, error: insertError } = await supabase
           .from('submissions')
           .insert([{
             title,
@@ -120,13 +119,40 @@
             file_url: publicUrl,
             status: 'Подана',
             submitted_at: new Date().toISOString(),
-            author_id: session.user.id
-          }]);
+            author_id: session.user.id,
+            views: 0
+          }])
+          .select()
+          .single();
 
         if (insertError) throw insertError;
 
+        // 3. Сохранение тегов (если есть)
+        if (tagsInput) {
+          const tagArray = tagsInput.split(',')
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
+
+          if (tagArray.length > 0) {
+            const tagsToInsert = tagArray.map(tag => ({
+              submission_id: submission.id,
+              tag: tag.toLowerCase()  // нормализуем (опционально)
+            }));
+
+            const { error: tagsError } = await supabase
+              .from('article_tags')
+              .insert(tagsToInsert);
+
+            if (tagsError) {
+              console.warn('Теги не сохранены:', tagsError);
+              // Не крашим подачу из-за тегов
+            }
+          }
+        }
+
         alert('Статья успешно подана!');
         window.location.href = 'dashboard.html';
+
       } catch (error) {
         console.error(error);
         alert('Ошибка: ' + error.message);
