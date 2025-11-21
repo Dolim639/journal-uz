@@ -11,20 +11,29 @@
 </head>
 <body class="index-page">
 
-  <!-- Hero -->
-  <section class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 80vh; display: flex; align-items: center;">
-    <div class="container">
-      <h1 class="display-3 fw-bold text-white mb-4">Журнал UZ</h1>
-      <p class="lead text-white mb-3 opacity-90">
-        Научный рецензируемый журнал Узбекистана
-      </p>
-      <p class="fs-4 text-white col-lg-10 mx-auto opacity-85">
-        Публикация оригинальных научных статей в области естественных, технических и гуманитарных наук. 
-        Открытый доступ, двойное слепое рецензирование, индексация в международных базах.
-      </p>
+  <!-- Фиолетовый hero — только логотип и название -->
+  <section class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container py-5">
+      <h1 class="display-3 fw-bold text-white mb-0">Журнал UZ</h1>
     </div>
   </section>
 
+  <!-- Белая часть с описанием журнала -->
+  <section class="bg-white py-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-10 mx-auto text-center">
+          <h2 class="fw-bold mb-4">Научный рецензируемый журнал Узбекистана</h2>
+          <p class="lead text-muted fs-4">
+            Публикация оригинальных научных статей в области естественных, технических и гуманитарных наук. 
+            Открытый доступ, двойное слепое рецензирование, индексация в международных базах.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Поиск + Теги + Статьи -->
   <div class="container my-5">
     <!-- Поиск -->
     <div class="row mb-5">
@@ -43,7 +52,7 @@
         <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- Все статьи (без "Популярные") -->
+      <!-- Статьи -->
       <div class="col-lg-9">
         <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
         <div id="articlesList" class="row g-4"></div>
@@ -75,7 +84,7 @@
       loadArticles(tag);
     };
 
-    // Загрузка статей (все опубликованные, с поиском и тегами)
+    // Загрузка всех опубликованных статей
     async function loadArticles(query = '') {
       let sql = supabase.from('submissions')
         .select('id, title, authors, abstract, file_url, views, submitted_at')
@@ -84,26 +93,28 @@
 
       if (query) {
         const q = query.toLowerCase();
-        const { data: tagData } = await supabase
-          .from('tags')
-          .select('id')
-          .ilike('name', `%${q}%`);
+        // Поиск по названию и аннотации
+        sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%`);
 
-        const tagIds = tagData ? tagData.map(t => t.id) : [];
-        let tagFilter = '';
-        if (tagIds.length > 0) {
-          const { data: linked } = await supabase
-            .from('submission_tags')
-            .select('submission_id')
-            .in('tag_id', tagIds);
-          const ids = linked ? linked.map(l => l.submission_id) : [];
-          tagFilter = ids.length > 0 ? `,id.in.(${ids.join(',')})` : '';
+        // Поиск по тегам
+        const { data: tagData } = await supabase.from('tags').select('id').ilike('name', `%${q}%`);
+        if (tagData && tagData.length > 0) {
+          const tagIds = tagData.map(t => t.id);
+          const { data: linked } = await supabase.from('submission_tags').select('submission_id').in('tag_id', tagIds);
+          if (linked && linked.length > 0) {
+            const ids = linked.map(l => l.submission_id);
+            sql = sql.or(`id.in.(${ids.join(',')})`);
+          }
         }
-
-        sql = sql.or(`title.ilike.%${q}%,abstract.ilike.%${q}%${tagFilter}`);
       }
 
-      const { data: articles } = await sql;
+      const { data: articles, error } = await sql;
+
+      if (error) {
+        console.error(error);
+        document.getElementById('articlesList').innerHTML = '<p class="text-danger col-12">Ошибка загрузки статей</p>';
+        return;
+      }
 
       const list = document.getElementById('articlesList');
       const noRes = document.getElementById('noResults');
