@@ -48,7 +48,7 @@
               <small class="text-muted">Нажмите кнопку ниже, чтобы выбрать теги</small>
             </div>
             <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#tagsModal">
-              <i class="fas fa-tags me-2"></i>Выбрать теги
+              Выбрать теги
             </button>
           </div>
 
@@ -59,7 +59,7 @@
 
           <div class="text-center">
             <button type="submit" class="btn btn-success btn-lg px-5">
-              <i class="fas fa-paper-plane me-2"></i>Отправить на рецензирование
+              Отправить на рецензирование
             </button>
           </div>
         </form>
@@ -67,30 +67,26 @@
     </div>
   </div>
 
-  <!-- Модальное окно с красивыми кнопками и группировкой -->
+  <!-- Модальное окно с тегами — теперь 100% грузятся -->
   <div class="modal fade" id="tagsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content rounded-4 shadow-lg">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Выберите теги (до 5)</h5>
+          <h5 class="modal-title">Выберите теги (до 5)</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body" id="tagsModalBody">
           <div class="text-center py-5">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-            <p class="mt-3 text-muted">Загрузка тегов...</p>
+            <p class="mt-3 text-muted">Загрузка тегов из базы...</p>
           </div>
         </div>
         <div class="modal-footer bg-light">
           <div class="me-auto">
             <small class="text-muted">Выбрано: <strong id="selectedCount">0</strong> из 5</small>
           </div>
-          <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">
-            Отмена
-          </button>
-          <button type="button" class="btn btn-primary btn-lg px-5" data-bs-dismiss="modal">
-            Готово
-          </button>
+          <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary btn-lg px-5" data-bs-dismiss="modal">Готово</button>
         </div>
       </div>
     </div>
@@ -102,14 +98,27 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     let selectedTagIds = [];
+    let tagsLoaded = false; // Флаг — загружены ли теги
 
-    // Загрузка тегов с группировкой по категориям
-    async function loadTagsForSubmit() {
-      const { data: tags } = await supabase
+    // Загрузка тегов с группировкой
+    async function loadTags() {
+      if (tagsLoaded) return; // Не грузим повторно
+
+      const { data: tags, error } = await supabase
         .from('tags')
         .select('id, name, category')
-        .order('category', { ascending: true })
+        .order('category')
         .order('name');
+
+      if (error) {
+        document.getElementById('tagsModalBody').innerHTML = `<p class="text-danger text-center">Ошибка загрузки тегов: ${error.message}</p>`;
+        return;
+      }
+
+      if (!tags || tags.length === 0) {
+        document.getElementById('tagsModalBody').innerHTML = '<p class="text-center text-muted">Теги не найдены в базе данных</p>';
+        return;
+      }
 
       const categories = {};
       tags.forEach(t => {
@@ -144,12 +153,14 @@
             selectedTagIds = selectedTagIds.filter(x => x !== id);
           } else {
             cb.checked = false;
-            alert('Можно выбрать максимум 5 тегов!');
+            alert('Максимум 5 тегов!');
           }
           document.getElementById('selectedCount').textContent = selectedTagIds.length;
           updateSelectedTagsDisplay();
         });
       });
+
+      tagsLoaded = true; // Помечаем, что теги загружены
     }
 
     // Обновление отображения выбранных тегов
@@ -165,10 +176,11 @@
       }
     }
 
-    // Загрузка при открытии модалки
-    document.querySelector('[data-bs-toggle="modal"]').addEventListener('click', () => {
-      if (document.getElementById('tagsModalBody').innerHTML.includes('spinner')) {
-        loadTagsForSubmit();
+    // ГАРАНТИРОВАННАЯ загрузка при открытии модалки
+    const tagsModal = document.getElementById('tagsModal');
+    tagsModal.addEventListener('shown.bs.modal', () => {
+      if (!tagsLoaded) {
+        loadTags();
       }
     });
 
@@ -196,7 +208,11 @@
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { alert('Сессия истекла'); window.location.href = 'login.html'; return; }
+      if (!session) {
+        alert('Сессия истекла');
+        window.location.href = 'login.html';
+        return;
+      }
 
       try {
         const fileName = `${Date.now()}_${file.name}`;
@@ -217,7 +233,6 @@
           .select()
           .single();
 
-        // Сохранение тегов
         const tagInserts = selectedTagIds.map(tag_id => ({
           submission_id: submission.id,
           tag_id
