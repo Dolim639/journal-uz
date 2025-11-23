@@ -62,14 +62,28 @@
   </div>
 
   <script type="module">
-   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Этот блок заменяет полностью импорт из supabase-config.js
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Защита от пустых переменных (чтобы видеть понятную ошибку)
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase не настроен! Добавьте переменные в Vercel: VITE_SUPABASE_URL и VITE_SUPABASE_ANON_KEY');
-  document.body.innerHTML = '<h1 class="text-center mt-5 text-danger">Ошибка конфигурации сайта</h1>';
+  console.error('Supabase не настроен! Добавьте в Vercel переменные:');
+  console.error('VITE_SUPABASE_URL = https://qvnrgtoilopzjpybpqkm.supabase.co');
+  console.error('VITE_SUPABASE_ANON_KEY = ваш_публичный_anon_key');
+  document.body.innerHTML = `
+    <div class="container text-center mt-5">
+      <h1 class="text-danger">Ошибка подключения к базе данных</h1>
+      <p>Администратор не добавил переменные окружения в Vercel.</p>
+      <p>Добавьте <code>VITE_SUPABASE_URL</code> и <code>VITE_SUPABASE_ANON_KEY</code></p>
+    </div>
+  `;
+  throw new Error('Supabase config missing');
 }
 
+const supabase = createClient(supabaseUrl, supabaseKey);
 const supabase = createClient(supabaseUrl, supabaseKey
 
     async function loadTags() {
@@ -167,4 +181,5 @@ const supabase = createClient(supabaseUrl, supabaseKey
   </script>
 </body>
 </html>
+
 
