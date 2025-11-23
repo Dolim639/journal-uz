@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Журнал UZ — Научный журнал Узбекистана</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body class="index-page">
+
+  <!-- Hero -->
+  <section class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container py-5">
+      <h1 class="display-3 fw-bold text-white mb-0">Журнал UZ</h1>
+    </div>
+  </section>
+
+  <!-- Описание -->
+  <section class="bg-white py-5">
+    <div class="container">
+      <div class="col-lg-10 mx-auto text-center">
+        <h2 class="fw-bold mb-4">Научный рецензируемый журнал Узбекистана</h2>
+        <p class="lead text-muted fs-4">
+          Публикация оригинальных научных статей в области естественных, технических и гуманитарных наук. 
+          Открытый доступ, двойное слепое рецензирование, индексация в международных базах.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="container my-5">
+    <!-- Поиск -->
+    <div class="row mb-5">
+      <div class="col-md-8 mx-auto">
+        <div class="input-group input-group-lg shadow-sm">
+          <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+          <input type="text" id="searchInput" class="form-control" placeholder="Поиск по названию или тегу...">
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Теги -->
+      <div class="col-lg-3 mb-5">
+        <h5 class="fw-bold mb-3">Теги</h5>
+        <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Статьи -->
+      <div class="col-lg-9">
+        <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
+        <div id="articlesList" class="row g-4"></div>
+        <div id="noResults" class="text-center text-muted py-5 d-none">
+          <i class="fas fa-book-open fa-3x mb-3"></i>
+          <p class="fs-5">Статьи не найдены</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function loadTags() {
+      const { data: tags } = await supabase.from('tags').select('id, name').order('name');
+      const cloud = document.getElementById('tagsCloud');
+      cloud.innerHTML = tags && tags.length > 0 
+        ? tags.map(t => `<button class="btn btn-outline-primary btn-sm mb-2" onclick="goToTag('${t.name}')">${t.name}</button>`).join('')
+        : '<small class="text-muted">Тегов пока нет</small>';
+    }
+
+    window.goToTag = (tag) => {
+      window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
+    };
+
+    async function loadArticles(query = '') {
+      let sql = supabase.from('submissions')
+        .select('id, title, authors, abstract, file_url, views, submitted_at')
+        .eq('status', 'Опубликована')
+        .order('submitted_at', { ascending: false });
+
+      if (query) {
+        const q = query.toLowerCase();
+        sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%`);
+
+        // Поиск по тегам — ИСПРАВЛЕНО: добавили %
+        const { data: tagData } = await supabase.from('tags').select('id').ilike('name', `%${q}%`);
+        if (tagData && tagData.length > 0) {
+          const tagIds = tagData.map(t => t.id);
+          const { data: linked } = await supabase.from('submission_tags').select('submission_id').in('tag_id', tagIds);
+          if (linked && linked.length > 0) {
+            const ids = linked.map(l => l.submission_id);
+            sql = sql.or(`id.in.(${ids.join(',')})`);
+          }
+        }
+      }
+
+      const { data: articles } = await sql;
+
+      if (!articles || articles.length === 0) {
+        document.getElementById('articlesList').innerHTML = '';
+        document.getElementById('noResults').classList.remove('d-none');
+        return;
+      }
+
+      document.getElementById('noResults').classList.add('d-none');
+
+      // Теги для статей
+      const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
+      const tagMap = {};
+      if (links) links.forEach(l => {
+        if (!tagMap[l.submission_id]) tagMap[l.submission_id] = [];
+        tagMap[l.submission_id].push(l.tag_id);
+      });
+
+      const { data: allTags } = await supabase.from('tags').select('id, name');
+
+      document.getElementById('articlesList').innerHTML = articles.map(a => {
+        const articleTags = (tagMap[a.id] || []).map(tagId => {
+          const tag = allTags.find(t => t.id === tagId);
+          return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-secondary text-decoration-none me-1">${tag.name}</a>` : '';
+        }).join('');
+
+        return `
+          <div class="col-md-12 mb-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+              <div class="card-body">
+                <h5 class="card-title fw-bold">
+                  <a href="article.html?id=${a.id}" class="text-primary text-decoration-none">
+                    ${a.title}
+                  </a>
+                </h5>
+                <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+                <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
+                <div class="mb-3">
+                  ${articleTags || '<small class="text-muted">Теги не указаны</small>'}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i> ${new Date(a.submitted_at).toLocaleDateString('ru')}
+                    <span class="ms-3"><i class="fas fa-eye me-1"></i> ${a.views || 0}</span>
+                  </small>
+                  <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">Читать полностью</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', e => loadArticles(e.target.value.trim()));
+
+    loadTags();
+    loadArticles();
+  </script>
+</body>
+</html>
