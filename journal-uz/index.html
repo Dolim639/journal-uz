@@ -32,7 +32,6 @@
   </section>
 
   <div class="container my-5">
-    <!-- Поиск -->
     <div class="row mb-5">
       <div class="col-md-8 mx-auto">
         <div class="input-group input-group-lg shadow-sm">
@@ -43,13 +42,11 @@
     </div>
 
     <div class="row">
-      <!-- Теги -->
       <div class="col-lg-3 mb-5">
         <h5 class="fw-bold mb-3">Теги</h5>
         <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- Статьи -->
       <div class="col-lg-9">
         <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
         <div id="articlesList" class="row g-4"></div>
@@ -62,29 +59,17 @@
   </div>
 
   <script type="module">
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Этот блок заменяет полностью импорт из supabase-config.js
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Защита от пустых переменных (чтобы видеть понятную ошибку)
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase не настроен! Добавьте в Vercel переменные:');
-  console.error('VITE_SUPABASE_URL = https://qvnrgtoilopzjpybpqkm.supabase.co');
-  console.error('VITE_SUPABASE_ANON_KEY = ваш_публичный_anon_key');
-  document.body.innerHTML = `
-    <div class="container text-center mt-5">
-      <h1 class="text-danger">Ошибка подключения к базе данных</h1>
-      <p>Администратор не добавил переменные окружения в Vercel.</p>
-      <p>Добавьте <code>VITE_SUPABASE_URL</code> и <code>VITE_SUPABASE_ANON_KEY</code></p>
-    </div>
-  `;
-  throw new Error('Supabase config missing');
-}
+    if (!supabaseUrl || !supabaseKey) {
+      document.body.innerHTML = '<h1 class="text-center mt-5 text-danger">Ошибка: не настроены переменные Supabase в Vercel</h1>';
+      throw new Error('Missing Supabase env variables');
+    }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-const supabase = createClient(supabaseUrl, supabaseKey
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     async function loadTags() {
       const { data: tags } = await supabase.from('tags').select('id, name').order('name');
@@ -108,7 +93,6 @@ const supabase = createClient(supabaseUrl, supabaseKey
         const q = query.toLowerCase();
         sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%`);
 
-        // Поиск по тегам — ИСПРАВЛЕНО: добавили %
         const { data: tagData } = await supabase.from('tags').select('id').ilike('name', `%${q}%`);
         if (tagData && tagData.length > 0) {
           const tagIds = tagData.map(t => t.id);
@@ -130,7 +114,6 @@ const supabase = createClient(supabaseUrl, supabaseKey
 
       document.getElementById('noResults').classList.add('d-none');
 
-      // Теги для статей
       const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
       const tagMap = {};
       if (links) links.forEach(l => {
@@ -181,5 +164,3 @@ const supabase = createClient(supabaseUrl, supabaseKey
   </script>
 </body>
 </html>
-
-
