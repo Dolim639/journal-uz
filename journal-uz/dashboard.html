@@ -143,15 +143,15 @@
                   </a>
                 </div>
 
-                <!-- ЧИСТЫЕ ИКОНКИ Font Awesome — без фона, только карандашик и мусорка -->
+                <!-- ЧИСТЫЕ ИКОНКИ — как лупа на главной! -->
                 <div class="action-icons">
                   ${canEdit ? `
-                    <a href="submit.html?edit=${item.id}" class="text-warning fs-4" title="Редактировать">
+                    <a href="submit.html?edit=${item.id}" class="text-warning" title="Редактировать">
                       Редактировать
                     </a>
                   ` : ''}
                   ${canDelete ? `
-                    <button class="text-danger fs-4" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
+                    <button type="button" class="text-danger" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
                       Удалить
                     </button>
                   ` : ''}
@@ -212,7 +212,7 @@
       transform: translateY(0);
     }
 
-    /* ЧИСТЫЕ ПРОЗРАЧНЫЕ ИКОНКИ — только карандашик и мусорка */
+    /* ТОЧНО КАК ЛУПА НА ГЛАВНОЙ — чистые иконки без фона */
     .action-icons {
       position: absolute;
       top: 15px;
@@ -222,7 +222,7 @@
       transition: all 0.3s ease;
       z-index: 10;
       display: flex;
-      gap: 18px;
+      gap: 16px;
     }
 
     .action-icons a,
@@ -231,19 +231,18 @@
       border: none;
       font-size: 1.6rem;
       padding: 8px;
-      border-radius: 50%;
-      transition: all 0.2s ease;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
 
     .action-icons a:hover {
-      background: rgba(255, 193, 7, 0.2);
-      transform: scale(1.2);
+      transform: scale(1.3);
+      color: #f59e0b !important;
     }
 
     .action-icons button:hover {
-      background: rgba(239, 68, 68, 0.2);
-      transform: scale(1.2);
+      transform: scale(1.3);
+      color: #ef4444 !important;
     }
   </style>
 </body>
