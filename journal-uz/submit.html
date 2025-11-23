@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Подача статьи — Журнал UZ</title>
+  <title id="pageTitle">Подача статьи — Журнал UZ</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
     <div class="container">
-      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
       <div class="navbar-nav ms-auto">
         <a href="dashboard.html" class="btn btn-outline-light me-3">Личный кабинет</a>
         <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
@@ -23,38 +23,47 @@
   <div class="container mt-5">
     <div class="card shadow-lg border-0">
       <div class="card-header bg-primary text-white text-center">
-        <h3 class="mb-0 py-3">Подача новой статьи</h3>
+        <h3 class="mb-0 py-3" id="formHeader">Подача новой статьи</h3>
       </div>
       <div class="card-body p-5">
         <form id="submitForm">
+          <input type="hidden" id="editId">
+
           <div class="mb-4">
             <label class="form-label fw-bold">Название статьи <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="title" required>
           </div>
+
           <div class="mb-4">
             <label class="form-label fw-bold">Авторы (через запятую) <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="authors" required>
           </div>
+
           <div class="mb-4">
             <label class="form-label fw-bold">Аннотация <span class="text-danger">*</span></label>
             <textarea class="form-control" id="abstract" rows="6" required></textarea>
           </div>
+
           <div class="mb-4">
             <label class="form-label fw-bold">Теги (до 5) <span class="text-danger">*</span></label>
             <div id="selectedTags" class="d-flex flex-wrap gap-2 mb-3">
-              <small class="text-muted">Нажмите кнопку ниже, чтобы выбрать теги</small>
+              <small class="text-muted">Выберите теги ниже</small>
             </div>
             <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#tagsModal">
               Выбрать теги
             </button>
           </div>
+
           <div class="mb-5">
             <label class="form-label fw-bold">PDF-файл статьи (макс. 20 МБ) <span class="text-danger">*</span></label>
-            <input type="file" class="form-control form-control-lg" id="file" accept=".pdf" required>
+            <input type="file" class="form-control form-control-lg" id="file" accept=".pdf">
+            <small class="text-muted">Оставьте пустым, если не хотите менять файл</small>
           </div>
+
           <div class="text-center">
+            <a href="dashboard.html" class="btn btn-secondary btn-lg px-5 me-3">Отмена</a>
             <button type="submit" class="btn btn-success btn-lg px-5">
-              Отправить на рецензирование
+              <span id="submitBtnText">Отправить на рецензирование</span>
             </button>
           </div>
         </form>
@@ -62,6 +71,7 @@
     </div>
   </div>
 
+  <!-- Модальное окно тегов -->
   <div class="modal fade" id="tagsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content rounded-4 shadow-lg">
@@ -71,16 +81,14 @@
         </div>
         <div class="modal-body" id="tagsModalBody">
           <div class="text-center py-5">
-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+            <div class="spinner-border text-primary"></div>
             <p class="mt-3 text-muted">Загрузка тегов...</p>
           </div>
         </div>
         <div class="modal-footer bg-light">
-          <div class="me-auto">
-            <small class="text-muted">Выбрано: <strong id="selectedCount">0</strong> из 5</small>
-          </div>
-          <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary btn-lg px-5" data-bs-dismiss="modal">Готово</button>
+          <small class="me-auto text-muted">Выбрано: <strong id="selectedCount">0</strong>/5</small>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
         </div>
       </div>
     </div>
@@ -92,22 +100,19 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     let selectedTagIds = [];
-    let tagsLoaded = false;
+    let isEditMode = false;
+    let currentArticleId = null;
+
+    // Получаем ID из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
 
     async function loadTags() {
-      if (tagsLoaded) return;
-
-      const { data: tags, error } = await supabase
+      const { data: tags } = await supabase
         .from('tags')
-        .select('id, name, category')  // ЯВНО указываем id
+        .select('id, name, category')
         .order('category')
         .order('name');
-
-      if (error || !tags || tags.length === 0) {
-        document.getElementById('tagsModalBody').innerHTML = '<p class="text-danger text-center">Теги не загружены</p>';
-        console.error(error);
-        return;
-      }
 
       const categories = {};
       tags.forEach(t => {
@@ -147,14 +152,12 @@
           updateSelectedTagsDisplay();
         });
       });
-
-      tagsLoaded = true;
     }
 
     function updateSelectedTagsDisplay() {
       const container = document.getElementById('selectedTags');
       if (selectedTagIds.length === 0) {
-        container.innerHTML = '<small class="text-muted">Нажмите кнопку выше, чтобы выбрать теги</small>';
+        container.innerHTML = '<small class="text-muted">Выберите теги ниже</small>';
       } else {
         container.innerHTML = selectedTagIds.map(id => {
           const label = document.querySelector(`#tag-${id} + label`);
@@ -163,9 +166,46 @@
       }
     }
 
-    document.getElementById('tagsModal').addEventListener('shown.bs.modal', () => {
-      if (!tagsLoaded) loadTags();
-    });
+    // Загрузка статьи для редактирования
+    async function loadArticleForEdit(id) {
+      const { data: article } = await supabase
+        .from('submissions')
+        .select('title, authors, abstract, file_url')
+        .eq('id', id)
+        .single();
+
+      const { data: tagLinks } = await supabase
+        .from('submission_tags')
+        .select('tag_id')
+        .eq('submission_id', id);
+
+      document.getElementById('title').value = article.title;
+      document.getElementById('authors').value = article.authors;
+      document.getElementById('abstract').value = article.abstract;
+      document.getElementById('editId').value = id;
+
+      selectedTagIds = tagLinks.map(t => t.tag_id);
+      updateSelectedTagsDisplay();
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
+
+      // Отмечаем чекбоксы
+      selectedTagIds.forEach(id => {
+        const cb = document.getElementById(`tag-${id}`);
+        if (cb) cb.checked = true;
+      });
+    }
+
+    // Инициализация
+    if (editId) {
+      isEditMode = true;
+      currentArticleId = editId;
+      document.getElementById('pageTitle').textContent = 'Редактирование статьи — Журнал UZ';
+      document.getElementById('formHeader').textContent = 'Редактирование статьи';
+      document.getElementById('submitBtnText').textContent = 'Сохранить изменения';
+      loadArticleForEdit(editId);
+    }
+
+    document.getElementById('tagsModal').addEventListener('shown.bs.modal', loadTags);
 
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -176,28 +216,48 @@
       const abstract = document.getElementById('abstract').value.trim();
       const file = document.getElementById('file').files[0];
 
-      if (!title || !authors || !abstract || !file) return alert('Заполните все поля!');
-      if (file.size > 20 * 1024 * 1024) return alert('Файл больше 20 МБ!');
+      if (!title || !authors || !abstract) return alert('Заполните все поля!');
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return alert('Сессия истекла'), location.href = 'login.html';
+      if (!session) return location.href = 'login.html';
 
       try {
-        const fileName = `${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('submissions').upload(fileName, file);
-        if (uploadError) throw uploadError;
+        let fileUrl = null;
+        if (file) {
+          if (file.size > 20 * 1024 * 1024) return alert('Файл больше 20 МБ!');
+          const fileName = `${Date.now()}_${file.name}`;
+          await supabase.storage.from('submissions').upload(fileName, file);
+          const { data } = supabase.storage.from('submissions').getPublicUrl(fileName);
+          fileUrl = data.publicUrl;
+        }
 
-        const { data: { publicUrl } } = supabase.storage.from('submissions').getPublicUrl(fileName);
+        if (isEditMode) {
+          const updates = { title, authors, abstract };
+          if (fileUrl) updates.file_url = fileUrl;
+          await supabase.from('submissions').update(updates).eq('id', currentArticleId);
 
-        const { data: submission } = await supabase
-          .from('submissions')
-          .insert({ title, authors, abstract, file_url: publicUrl, status: 'Подана', author_id: session.user.id, views: 0 })
-          .select()
-          .single();
+          await supabase.from('submission_tags').delete().eq('submission_id', currentArticleId);
+          await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: currentArticleId, tag_id })));
 
-        await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: submission.id, tag_id })));
+          alert('Статья успешно обновлена!');
+        } else {
+          const fileName = `${Date.now()}_${file.name}`;
+          await supabase.storage.from('submissions').upload(fileName, file);
+          const { data } = supabase.storage.from('submissions').getPublicUrl(fileName);
 
-        alert('Статья успешно подана!');
+          const { data: submission } = await supabase
+            .from('submissions')
+            .insert({
+              title, authors, abstract, file_url: data.publicUrl,
+              status: 'Подана', author_id: session.user.id, views: 0
+            })
+            .select()
+            .single();
+
+          await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: submission.id, tag_id })));
+          alert('Статья успешно подана!');
+        }
+
         location.href = 'dashboard.html';
       } catch (err) {
         console.error(err);
@@ -207,4 +267,3 @@
   </script>
 </body>
 </html>
-
