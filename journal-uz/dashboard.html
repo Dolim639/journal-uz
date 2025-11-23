@@ -7,7 +7,6 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
-  <!-- Обязательно подключаем Bootstrap JS для модалок -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body class="bg-light">
@@ -27,11 +26,14 @@
   </nav>
 
   <div class="container mt-5">
-    <div class="text-center mb-5">
-      <h1 class="display-5 fw-bold text-white bg-primary rounded-3 py-4 shadow-lg">
-        Личный кабинет
+    <!-- Приветствие — большое, белое, жирное, слева -->
+    <div class="mb-5">
+      <h1 class="display-4 fw-bold text-white mb-2" id="greetingText">
+        Привет, <span id="userName">загружается...</span>!
       </h1>
-      <p class="lead mt-3" id="welcomeText">Ваши статьи</p>
+      <h2 class="display-6 fw-bold text-white opacity-90">
+        Ваши статьи
+      </h2>
     </div>
 
     <div id="submissionsList" class="row g-4"></div>
@@ -50,9 +52,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title">
-            Удалить статью?
-          </h5>
+          <h5 class="modal-title">Удалить статью?</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -62,9 +62,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-danger" id="confirmDelete">
-            Удалить
-          </button>
+          <button type="button" class="btn btn-danger" id="confirmDelete">Удалить</button>
         </div>
       </div>
     </div>
@@ -91,15 +89,12 @@
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('full_name')
         .eq('id', session.user.id)
         .single();
 
       if (profile) {
-        document.getElementById('welcomeText').innerHTML = `
-          Ваши статьи<br>
-          <small class="text-muted">Привет, <strong>${profile.full_name}</strong>! Роль: ${profile.role}</small>
-        `;
+        document.getElementById('userName').textContent = profile.full_name;
       }
 
       loadSubmissions(session.user.id);
@@ -134,7 +129,7 @@
                 <h5 class="card-title fw-bold">${item.title}</h5>
                 <p class="text-muted small">Авторы: ${item.authors}</p>
                 <p class="card-text flex-grow-1">${item.abstract.substring(0, 120)}...</p>
-                
+
                 <div class="mt-auto">
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <span class="badge ${item.status === 'Опубликована' ? 'bg-success' : 
@@ -149,15 +144,15 @@
                   </a>
                 </div>
 
-                <!-- Иконки редактирования и удаления — появляются при наведении -->
-                <div class="action-buttons">
+                <!-- Кнопки-иконки — появляются при наведении -->
+                <div class="action-icons">
                   ${canEdit ? `
-                    <a href="submit.html?edit=${item.id}" class="btn btn-sm btn-warning text-white">
+                    <a href="submit.html?edit=${item.id}" class="btn btn-warning btn-sm rounded-circle">
                       Редактировать
                     </a>
                   ` : ''}
                   ${canDelete ? `
-                    <button class="btn btn-sm btn-danger" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')">
+                    <button class="btn btn-danger btn-sm rounded-circle" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')">
                       Удалить
                     </button>
                   ` : ''}
@@ -169,7 +164,6 @@
       }).join('');
     }
 
-    // Удаление — теперь без ошибки!
     window.confirmDelete = (id, title) => {
       currentDeleteId = id;
       document.getElementById('deleteTitle').textContent = title;
@@ -183,8 +177,7 @@
       await supabase.from('submission_tags').delete().eq('submission_id', currentDeleteId);
       await supabase.from('submissions').delete().eq('id', currentDeleteId);
 
-      const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-      modal.hide();
+      bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
       alert('Статья удалена');
       location.reload();
     });
@@ -194,29 +187,33 @@
 
   <style>
     body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
     }
 
-    #welcomeText {
-      font-size: 2.8rem;
-      color: white;
+    #greetingText {
+      font-size: 3.5rem;
       text-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
 
-    .hover-card {
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
       transition: all 0.3s ease;
     }
+
     .hover-card:hover {
       transform: translateY(-10px);
       box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
     }
-    .hover-card:hover .action-buttons {
+
+    .hover-card:hover .action-icons {
       opacity: 1;
       transform: translateY(0);
     }
 
-    .action-buttons {
+    .action-icons {
       position: absolute;
       top: 15px;
       right: 15px;
@@ -225,10 +222,10 @@
       transition: all 0.3s ease;
       z-index: 10;
       display: flex;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .action-buttons .btn {
+    .action-icons .btn {
       width: 44px;
       height: 44px;
       border-radius: 50%;
