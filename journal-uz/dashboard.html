@@ -26,7 +26,6 @@
   </nav>
 
   <div class="container mt-5">
-    <!-- Приветствие — большое, белое, жирное, слева -->
     <div class="mb-5">
       <h1 class="display-4 fw-bold text-white mb-2" id="greetingText">
         Привет, <span id="userName">загружается...</span>!
@@ -144,15 +143,15 @@
                   </a>
                 </div>
 
-                <!-- Кнопки-иконки — появляются при наведении -->
+                <!-- Чистые прозрачные иконки — без фона! -->
                 <div class="action-icons">
                   ${canEdit ? `
-                    <a href="submit.html?edit=${item.id}" class="btn btn-warning btn-sm rounded-circle">
+                    <a href="submit.html?edit=${item.id}" class="icon-btn edit-icon" title="Редактировать">
                       Редактировать
                     </a>
                   ` : ''}
                   ${canDelete ? `
-                    <button class="btn btn-danger btn-sm rounded-circle" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')">
+                    <button class="icon-btn delete-icon" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
                       Удалить
                     </button>
                   ` : ''}
@@ -198,14 +197,14 @@
 
     .card {
       background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      border-radius: 22px;
       transition: all 0.3s ease;
     }
 
     .hover-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
+      transform: translateY(-12px);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.22) !important;
     }
 
     .hover-card:hover .action-icons {
@@ -213,6 +212,7 @@
       transform: translateY(0);
     }
 
+    /* Чистые иконки без фона — только карандашик и мусорка */
     .action-icons {
       position: absolute;
       top: 15px;
@@ -222,18 +222,39 @@
       transition: all 0.3s ease;
       z-index: 10;
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .action-icons .btn {
-      width: 44px;
-      height: 44px;
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1.3rem;
+      color: #333;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
     }
+
+    .edit-icon {
+      color: #f59e0b;
+    }
+
+    .delete-icon {
+      color: #ef4444;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.15);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .edit-icon:hover { background: #fff3cd; }
+    .delete-icon:hover { background: #fee2e2; }
   </style>
 </body>
 </html>
