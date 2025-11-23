@@ -11,19 +11,16 @@
 </head>
 <body class="index-page">
 
-  <!-- Hero с заголовком слева -->
-  <section class="text-white py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+  <!-- Hero — только заголовок слева, без перегрузки -->
+  <section class="py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="container py-5">
-      <div class="row align-items-center min-vh-100">
+      <div class="row">
         <div class="col-lg-8">
-          <h1 class="display-1 fw-bold text-white mb-3">
+          <h1 class="display-3 fw-bold text-white mb-2">
             Журнал UZ
           </h1>
-          <p class="lead fs-2 text-white opacity-90 mb-4">
+          <p class="lead text-white fs-4 mb-0 opacity-90">
             Научный рецензируемый журнал Узбекистана
-          </p>
-          <p class="fs-5 text-white opacity-80">
-            Публикация оригинальных научных статей • Открытый доступ • Двойное слепое рецензирование
           </p>
         </div>
       </div>
@@ -43,13 +40,13 @@
     </div>
 
     <div class="row">
-      <!-- Теги слева — сгруппированные по наукам -->
+      <!-- Теги слева -->
       <div class="col-lg-3 mb-5">
         <h5 class="fw-bold mb-4 text-primary">Направления науки</h5>
         <div id="tagsCloud" class="bg-light p-4 rounded-3 shadow-sm">
           <div class="text-center text-muted">
             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-            <small class="d-block mt-2">Загрузка направлений...</small>
+            <small class="d-block mt-2">Загрузка...</small>
           </div>
         </div>
       </div>
@@ -74,12 +71,10 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Переход по тегу
     window.goToTag = (tag) => {
       window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
     };
 
-    // Загрузка тегов с группировкой по категориям
     async function loadTags() {
       const { data: tags } = await supabase
         .from('tags')
@@ -108,7 +103,6 @@
       `).join('');
     }
 
-    // Загрузка статей
     async function loadArticles(query = '') {
       let sql = supabase.from('submissions')
         .select('id, title, authors, abstract, file_url, views, submitted_at')
@@ -133,7 +127,6 @@
 
       noResults.classList.add('d-none');
 
-      // Получаем теги для статей
       const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
       const { data: allTags } = await supabase.from('tags').select('id, name');
       const tagMap = {};
@@ -148,8 +141,8 @@
         ).join('');
 
         return `
-          <div class="col-md-12 mb-4">
-            <div class="card h-100 shadow-sm border-0 hover-shadow transition">
+          <div class="col-12 mb-4">
+            <div class="card h-100 shadow-sm border-0 hover-shadow">
               <div class="card-body">
                 <h5 class="card-title fw-bold">
                   <a href="article.html?id=${a.id}" class="text-primary text-decoration-none stretched-link">
@@ -175,12 +168,10 @@
       }).join('');
     }
 
-    // Поиск
     document.getElementById('searchInput').addEventListener('input', e => {
       loadArticles(e.target.value.trim());
     });
 
-    // Инициализация
     loadTags();
     loadArticles();
   </script>
@@ -190,11 +181,8 @@
       transition: all 0.3s ease;
     }
     .hover-shadow:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
-    }
-    .transition {
-      transition: all 0.3s ease;
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
     }
   </style>
 </body>
