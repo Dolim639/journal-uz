@@ -28,71 +28,68 @@
   </div>
 
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    import { supabaseUrl, supabaseKey } from './supabase-config.js';
+   // ← Замени весь <script> в tag.html на этот:
+async function loadArticlesByTag(tagName) {
+  // ИСПРАВЛЕНО: ищем по имени с %
+  const { data: tagData, error: tagError } = await supabase
+    .from('tags')
+    .select('id')
+    .ilike('name', tagName)  // Теперь найдёт даже если передан в верхнем регистре
+    .single();
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  if (tagError || !tagData) {
+    document.getElementById('noResults').classList.remove('d-none');
+    return;
+  }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const tagName = urlParams.get('tag') || decodeURIComponent(window.location.pathname.split('/tag/')[1] || '');
+  const { data: links } = await supabase
+    .from('submission_tags')
+    .select('submission_id')
+    .eq('tag_id', tagData.id);
 
-    if (!tagName) {
-      document.body.innerHTML = '<h1 class="text-center mt-5">Тег не указан</h1>';
-    } else {
-      document.getElementById('tagName').textContent = tagName;
-      document.getElementById('currentTag').textContent = tagName;
-      loadArticlesByTag(tagName);
-    }
+  if (!links || links.length === 0) {
+    document.getElementById('noResults').classList.remove('d-none');
+    return;
+  }
 
-    async function loadArticlesByTag(tag) {
-      const { data: tagData } = await supabase.from('tags').select('id').eq('name', tag).single();
-      if (!tagData) {
-        document.getElementById('noResults').classList.remove('d-none');
-        return;
-      }
+  const ids = links.map(l => l.submission_id);
+  const { data: articles } = await supabase
+    .from('submissions')
+    .select('id, title, authors, abstract, file_url, views, submitted_at')
+    .in('id', ids)
+    .eq('status', 'Опубликована')
+    .order('submitted_at', { ascending: false });
 
-      const { data: links } = await supabase.from('submission_tags').select('submission_id').eq('tag_id', tagData.id);
-      if (!links || links.length === 0) {
-        document.getElementById('noResults').classList.remove('d-none');
-        return;
-      }
+  const container = document.getElementById('tagArticles');
+  if (!articles || articles.length === 0) {
+    document.getElementById('noResults').classList.remove('d-none');
+    return;
+  }
 
-      const ids = links.map(l => l.submission_id);
-      const { data: articles } = await supabase.from('submissions')
-        .select('id, title, authors, abstract, file_url, views, submitted_at')
-        .in('id', ids)
-        .eq('status', 'Опубликована')
-        .order('submitted_at', { ascending: false });
-
-      const container = document.getElementById('tagArticles');
-      if (!articles || articles.length === 0) {
-        document.getElementById('noResults').classList.remove('d-none');
-        return;
-        }
-
-      container.innerHTML = articles.map(a => `
-        <div class="col-md-12 mb-4">
-          <div class="card h-100 shadow-sm hover-shadow">
-            <div class="card-body">
-              <h5 class="card-title fw-bold">
-                <a href="article.html?id=${a.id}" class="text-primary text-decoration-none">
-                  ${a.title}
-                </a>
-              </h5>
-              <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
-              <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
-              <div class="d-flex justify-content-between align-items-center mt-3">
-                <small class="text-muted">
-                  <i class="fas fa-calendar me-1"></i> ${new Date(a.submitted_at).toLocaleDateString('ru')}
-                  <span class="ms-3"><i class="fas fa-eye me-1"></i> ${a.views || 0}</span>
-                </small>
-                <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">Читать</a>
-              </div>
-            </div>
+  container.innerHTML = articles.map(a => `
+    <div class="col-md-12 mb-4">
+      <div class="card h-100 shadow-sm hover-shadow">
+        <div class="card-body">
+          <h5 class="card-title fw-bold">
+            <a href="article.html?id=${a.id}" class="text-primary text-decoration-none">
+              ${a.title}
+            </a>
+          </h5>
+          <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+          <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted">
+              <i class="fas fa-calendar me-1"></i> ${new Date(a.submitted_at).toLocaleDateString('ru')}
+              <span class="ms-3"><i class="fas fa-eye me-1"></i> ${a.views || 0}</span>
+            </small>
+            <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">Читать</a>
           </div>
         </div>
-      `).join('');
-    }
+      </div>
+    </div>
+  `).join('');
+}
   </script>
 </body>
 </html>
+
