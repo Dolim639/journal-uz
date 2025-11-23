@@ -21,7 +21,7 @@
     </div>
   </nav>
 
-  <!-- Экран загрузки -->
+  <!-- Экран загрузки при редактировании -->
   <div id="loadingScreen" class="position-fixed top-0 start-0 w-100 h-100 bg-white d-flex align-items-center justify-content-center" style="z-index: 9999;">
     <div class="text-center">
       <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;"></div>
@@ -39,22 +39,22 @@
           <input type="hidden" id="editId">
 
           <div class="mb-4">
-            <label class="form-label fw-bold">Название статьи *</label>
+            <label class="form-label fw-bold">Название статьи <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="title" required>
           </div>
 
           <div class="mb-4">
-            <label class="form-label fw-bold">Авторы *</label>
+            <label class="form-label fw-bold">Авторы (через запятую) <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="authors" required>
           </div>
 
           <div class="mb-4">
-            <label class="form-label fw-bold">Аннотация *</label>
+            <label class="form-label fw-bold">Аннотация <span class="text-danger">*</span></label>
             <textarea class="form-control" id="abstract" rows="6" required></textarea>
           </div>
 
           <div class="mb-4">
-            <label class="form-label fw-bold">Теги (до 5) *</label>
+            <label class="form-label fw-bold">Теги (до 5) <span class="text-danger">*</span></label>
             <div id="selectedTags" class="d-flex flex-wrap gap-2 mb-3">
               <small class="text-muted">Нажмите кнопку ниже</small>
             </div>
@@ -72,7 +72,7 @@
           <div class="text-center">
             <a href="dashboard.html" class="btn btn-secondary btn-lg px-5 me-3">Отмена</a>
             <button type="submit" class="btn btn-success btn-lg px-5">
-              <span id="submitBtnText">Отправить</span>
+              <span id="submitBtnText">Отправить на рецензирование</span>
             </button>
           </div>
         </form>
@@ -114,19 +114,20 @@
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit');
 
-    // Загружаем теги и сразу обновляем отображение
-    async function loadTagsAndUpdate() {
+    // Загружаем все теги один раз
+    async function loadAllTags() {
+      if (allTags.length > 0) return allTags;
       const { data } = await supabase.from('tags').select('id, name, category').order('category').order('name');
       allTags = data || [];
-
-      // Обновляем выбранные теги
-      updateSelectedTagsDisplay();
+      return allTags;
     }
 
-    // Рендерим модалку
-    function renderTagsModal() {
+    // Рендерим модалку с тегами
+    async function renderTagsModal() {
+      const tags = await loadAllTags();
+
       const groups = {};
-      allTags.forEach(t => {
+      tags.forEach(t => {
         if (!groups[t.category]) groups[t.category] = [];
         groups[t.category].push(t);
       });
@@ -172,7 +173,7 @@
       });
     }
 
-    // Обновление отображения выбранных тегов — теперь всегда правильные названия!
+    // Обновляем отображение выбранных тегов — теперь всегда правильные названия!
     function updateSelectedTagsDisplay() {
       const container = document.getElementById('selectedTags');
       if (selectedTagIds.length === 0) {
@@ -187,49 +188,87 @@
     }
 
     // Загрузка статьи при редактировании
-    async function loadArticle() {
-      const { data: article } = await supabase.from('submissions').select('*').eq('id', editId).single();
-      const { data: links } = await supabase.from('submission_tags').select('tag_id').eq('submission_id', editId);
+    async function loadForEdit(id) {
+      const { data: article } = await supabase.from('submissions').select('*').eq('id', id).single();
+      const { data: links } = await supabase.from('submission_tags').select('tag_id').eq('submission_id', id);
 
       document.getElementById('title').value = article.title;
       document.getElementById('authors').value = article.authors;
       document.getElementById('abstract').value = article.abstract;
-      document.getElementById('editId').value = editId;
+      document.getElementById('editId').value = id;
 
       selectedTagIds = links ? links.map(l => l.tag_id) : [];
 
-      // Сначала загружаем теги, потом обновляем отображение
-      await loadTagsAndUpdate();
+      // Ждём загрузки тегов и только потом обновляем отображение
+      await loadAllTags();
+      updateSelectedTagsDisplay();
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
 
       document.getElementById('loadingScreen').remove();
     }
 
+    // Инициализация
     if (editId) {
       isEditMode = true;
-бат
       currentArticleId = editId;
       document.getElementById('formHeader').textContent = 'Редактирование статьи';
       document.getElementById('submitBtnText').textContent = 'Сохранить изменения';
-      loadArticle();
+      loadForEdit(editId);
     } else {
       document.getElementById('loadingScreen').remove();
-      loadTagsAndUpdate();
     }
 
-    // Открытие модалки — теперь всё работает
-    document.getElementById('tagsModal').addEventListener('shown.bs.modal', () => {
-      renderTagsModal();
-    });
+    // Открытие модалки — теги загружаются и работают
+    document.getElementById('tagsModal').addEventListener('shown.bs.modal', renderTagsModal);
 
-    // Отправка (без изменений)
+    // Отправка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (selectedTagIds.length === 0) return alert('Выберите хотя бы один тег!');
 
-      // ... твой код отправки ...
+      const title = document.getElementById('title').value.trim();
+      const authors = document.getElementById('authors').value.trim();
+      const abstract = document.getElementById('abstract').value.trim();
+      const file = document.getElementById('file').files[0];
 
-      alert(isEditMode ? 'Статья обновлена!' : 'Статья подана!');
-      location.href = 'dashboard.html';
+      if (!title || !authors || !abstract) return alert('Заполните все поля!');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return location.href = 'login.html';
+
+      try {
+        let fileUrl = null;
+        if (file) {
+          if (file.size > 20 * 1024 * 1024) return alert('Файл больше 20 МБ!');
+          const fileName = `${Date.now()}_${file.name}`;
+          await supabase.storage.from('submissions').upload(fileName, file);
+          fileUrl = supabase.storage.from('submissions').getPublicUrl(fileName).data.publicUrl;
+        }
+
+        if (isEditMode) {
+          const updates = { title, authors, abstract };
+          if (fileUrl) updates.file_url = fileUrl;
+          await supabase.from('submissions').update(updates).eq('id', currentArticleId);
+          await supabase.from('submission_tags').delete().eq('submission_id', currentArticleId);
+          await supabase.from('submission_tags').insert(selectedTagIds.map(id => ({ submission_id: currentArticleId, tag_id: id })));
+          alert('Статья успешно обновлена!');
+        } else {
+          const fileName = `${Date.now()}_${file.name}`;
+          await supabase.storage.from('submissions').upload(fileName, file);
+          const url = supabase.storage.from('submissions').getPublicUrl(fileName).data.publicUrl;
+
+          const { data: sub } = await supabase.from('submissions')
+            .insert({ title, authors, abstract, file_url: url, status: 'Подана', author_id: session.user.id, views: 0 })
+            .select().single();
+
+          await supabase.from('submission_tags').insert(selectedTagIds.map(id => ({ submission_id: sub.id, tag_id: id })));
+          alert('Статья успешно подана!');
+        }
+        location.href = 'dashboard.html';
+      } catch (err) {
+        console.error(err);
+        alert('Ошибка: ' + err.message);
+      }
     });
   </script>
 </body>
