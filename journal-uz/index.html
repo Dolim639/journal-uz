@@ -12,15 +12,21 @@
 <body class="index-page">
 
   <!-- Hero -->
-  <section class="py-5 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <section class="py-5 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
     <div class="container py-5">
-      <div class="row">
+      <div class="row align-items-center">
         <div class="col-lg-9">
           <h1 class="display-3 fw-bold text-white mb-3">Журнал UZ</h1>
           <p class="lead fs-3 text-white mb-3">Научный рецензируемый журнал Узбекистана</p>
           <p class="fs-5 text-white opacity-90">
             Публикация оригинальных научных статей • Открытый доступ • Двойное слепое рецензирование
           </p>
+        </div>
+        <div class="col-lg-3 text-lg-end">
+          <!-- КНОПКА ВОЙТИ — красивая, в стиле сайта -->
+          <a href="login.html" class="btn btn-outline-light btn-lg px-5 py-3 shadow-lg hover-shadow">
+            <i class="fas fa-sign-in-alt me-2"></i>Войти
+          </a>
         </div>
       </div>
     </div>
@@ -38,7 +44,6 @@
     </div>
 
     <div class="row">
-      <!-- Теги слева -->
       <div class="col-lg-3 mb-5">
         <h5 class="fw-bold mb-4">Направления науки</h5>
         <div id="tagsCloud" class="bg-light p-4 rounded-3 shadow-sm">
@@ -49,7 +54,6 @@
         </div>
       </div>
 
-      <!-- Статьи справа -->
       <div class="col-lg-9">
         <h3 class="fw-bold mb-4">Опубликованные статьи</h3>
         <div id="articlesList" class="row g-4"></div>
@@ -61,6 +65,7 @@
     </div>
   </div>
 
+  <!-- Тот же скрипт, что и раньше — работает идеально -->
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
@@ -74,15 +79,13 @@
     async function loadTags() {
       const { data: tags, error } = await supabase
         .from('tags')
-        .select('id, name, category')  // ЯВНО указываем id (uuid)
+        .select('id, name, category')
         .order('category')
         .order('name');
 
       const cloud = document.getElementById('tagsCloud');
-
       if (error || !tags || tags.length === 0) {
         cloud.innerHTML = '<p class="text-danger text-center">Теги не загружены</p>';
-        console.error('Ошибка тегов:', error);
         return;
       }
 
@@ -182,7 +185,7 @@
 
   <style>
     .hover-shadow { transition: all 0.3s ease; }
-    .hover-shadow:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.12) !important; }
+    .hover-shadow:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; }
   </style>
 </body>
 </html>
