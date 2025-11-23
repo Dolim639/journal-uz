@@ -73,11 +73,16 @@ const supabase = createClient(supabaseUrl, supabaseKey
 
     async function loadArticlesByTag(tagName) {
       // ИСПРАВЛЕНО: ищем по ilike с % и правильной раскодировкой
-      const { data: tagData, error: tagError } = await supabase
-        .from('tags')
-        .select('id')
-        .ilike('name', `%${tagName}%`)  // Теперь найдёт "Квантовая физика", "квантовая", "Физика" и т.д.
-        .single();
+    const { data: tagData } = await supabase
+  .from('tags')
+  .select('id')
+  .ilike('name', tagName.trim())
+  .maybeSingle(); 
+
+if (!tagData) {
+  document.getElementById('noResults').classList.remove('d-none');
+  return;
+}
 
       if (tagError || !tagData) {
         console.error('Тег не найден:', tagError);
@@ -139,4 +144,5 @@ const supabase = createClient(supabaseUrl, supabaseKey
   </script>
 </body>
 </html>
+
 
