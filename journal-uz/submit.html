@@ -31,17 +31,14 @@
             <label class="form-label fw-bold">Название статьи <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="title" required>
           </div>
-
           <div class="mb-4">
             <label class="form-label fw-bold">Авторы (через запятую) <span class="text-danger">*</span></label>
             <input type="text" class="form-control form-control-lg" id="authors" required>
           </div>
-
           <div class="mb-4">
             <label class="form-label fw-bold">Аннотация <span class="text-danger">*</span></label>
             <textarea class="form-control" id="abstract" rows="6" required></textarea>
           </div>
-
           <div class="mb-4">
             <label class="form-label fw-bold">Теги (до 5) <span class="text-danger">*</span></label>
             <div id="selectedTags" class="d-flex flex-wrap gap-2 mb-3">
@@ -51,12 +48,10 @@
               Выбрать теги
             </button>
           </div>
-
           <div class="mb-5">
             <label class="form-label fw-bold">PDF-файл статьи (макс. 10 МБ) <span class="text-danger">*</span></label>
             <input type="file" class="form-control form-control-lg" id="file" accept=".pdf" required>
           </div>
-
           <div class="text-center">
             <button type="submit" class="btn btn-success btn-lg px-5">
               Отправить на рецензирование
@@ -67,7 +62,6 @@
     </div>
   </div>
 
-  <!-- Модальное окно с тегами — теперь 100% грузятся -->
   <div class="modal fade" id="tagsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
       <div class="modal-content rounded-4 shadow-lg">
@@ -78,7 +72,7 @@
         <div class="modal-body" id="tagsModalBody">
           <div class="text-center py-5">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-            <p class="mt-3 text-muted">Загрузка тегов из базы...</p>
+            <p class="mt-3 text-muted">Загрузка тегов...</p>
           </div>
         </div>
         <div class="modal-footer bg-light">
@@ -98,25 +92,20 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     let selectedTagIds = [];
-    let tagsLoaded = false; // Флаг — загружены ли теги
+    let tagsLoaded = false;
 
-    // Загрузка тегов с группировкой
     async function loadTags() {
-      if (tagsLoaded) return; // Не грузим повторно
+      if (tagsLoaded) return;
 
       const { data: tags, error } = await supabase
         .from('tags')
-        .select('id, name, category')
+        .select('id, name, category')  // ЯВНО указываем id
         .order('category')
         .order('name');
 
-      if (error) {
-        document.getElementById('tagsModalBody').innerHTML = `<p class="text-danger text-center">Ошибка загрузки тегов: ${error.message}</p>`;
-        return;
-      }
-
-      if (!tags || tags.length === 0) {
-        document.getElementById('tagsModalBody').innerHTML = '<p class="text-center text-muted">Теги не найдены в базе данных</p>';
+      if (error || !tags || tags.length === 0) {
+        document.getElementById('tagsModalBody').innerHTML = '<p class="text-danger text-center">Теги не загружены</p>';
+        console.error(error);
         return;
       }
 
@@ -143,7 +132,6 @@
         </div>
       `).join('');
 
-      // Обработчик чекбоксов
       container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', () => {
           const id = cb.value;
@@ -160,10 +148,9 @@
         });
       });
 
-      tagsLoaded = true; // Помечаем, что теги загружены
+      tagsLoaded = true;
     }
 
-    // Обновление отображения выбранных тегов
     function updateSelectedTagsDisplay() {
       const container = document.getElementById('selectedTags');
       if (selectedTagIds.length === 0) {
@@ -171,76 +158,47 @@
       } else {
         container.innerHTML = selectedTagIds.map(id => {
           const label = document.querySelector(`#tag-${id} + label`);
-          return `<span class="badge bg-primary fs-6 px-3 py-2 me-2 mb-2">${label ? label.textContent : 'Тег'}</span>`;
+          return `<span class="badge bg-primary fs-6 px-3 py-2 me-2 mb-2">${label?.textContent || 'Тег'}</span>`;
         }).join('');
       }
     }
 
-    // ГАРАНТИРОВАННАЯ загрузка при открытии модалки
-    const tagsModal = document.getElementById('tagsModal');
-    tagsModal.addEventListener('shown.bs.modal', () => {
-      if (!tagsLoaded) {
-        loadTags();
-      }
+    document.getElementById('tagsModal').addEventListener('shown.bs.modal', () => {
+      if (!tagsLoaded) loadTags();
     });
 
-    // Отправка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      if (selectedTagIds.length === 0) {
-        alert('Выберите хотя бы один тег!');
-        return;
-      }
+      if (selectedTagIds.length === 0) return alert('Выберите хотя бы один тег!');
 
       const title = document.getElementById('title').value.trim();
       const authors = document.getElementById('authors').value.trim();
       const abstract = document.getElementById('abstract').value.trim();
       const file = document.getElementById('file').files[0];
 
-      if (!title || !authors || !abstract || !file) {
-        alert('Заполните все обязательные поля!');
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        alert('Файл больше 10 МБ!');
-        return;
-      }
+      if (!title || !authors || !abstract || !file) return alert('Заполните все поля!');
+      if (file.size > 10 * 1024 * 1024) return alert('Файл больше 10 МБ!');
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('Сессия истекла');
-        window.location.href = 'login.html';
-        return;
-      }
+      if (!session) return alert('Сессия истекла'), location.href = 'login.html';
 
       try {
         const fileName = `${Date.now()}_${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('submissions')
-          .upload(fileName, file);
-
+        const { error: uploadError } = await supabase.storage.from('submissions').upload(fileName, file);
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('submissions').getPublicUrl(fileName);
 
         const { data: submission } = await supabase
           .from('submissions')
-          .insert({
-            title, authors, abstract, file_url: publicUrl,
-            status: 'Подана', author_id: session.user.id, views: 0
-          })
+          .insert({ title, authors, abstract, file_url: publicUrl, status: 'Подана', author_id: session.user.id, views: 0 })
           .select()
           .single();
 
-        const tagInserts = selectedTagIds.map(tag_id => ({
-          submission_id: submission.id,
-          tag_id
-        }));
-        await supabase.from('submission_tags').insert(tagInserts);
+        await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: submission.id, tag_id })));
 
-        alert('Статья успешно подана на рецензирование!');
-        window.location.href = 'dashboard.html';
+        alert('Статья успешно подана!');
+        location.href = 'dashboard.html';
       } catch (err) {
         console.error(err);
         alert('Ошибка: ' + err.message);
