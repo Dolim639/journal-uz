@@ -1,4 +1,4 @@
-// ← Замени весь <script> в tag.html на этот:
+
 async function loadArticlesByTag(tagName) {
   // ИСПРАВЛЕНО: ищем по имени с %
   const { data: tagData, error: tagError } = await supabase
@@ -59,3 +59,4 @@ async function loadArticlesByTag(tagName) {
     </div>
   `).join('');
 }
+
