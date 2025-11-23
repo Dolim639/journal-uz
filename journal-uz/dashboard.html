@@ -169,23 +169,24 @@
     }
 
     window.confirmDelete = (id, title) => {
-      currentDeleteId = id;
-      document.getElementById('deleteTitle').textContent = title;
-      new bootstrap.Modal(document.getElementById('deleteModal')).show();
-    };
+    currentDeleteId = id;
+    document.getElementById('deleteTitle').textContent = title;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+  };
 
-    document.getElementById('confirmDelete').addEventListener('click', async () => {
-      if (!currentDeleteId) return;
+  document.getElementById('confirmDelete').addEventListener('click', async () => {
+    if (!currentDeleteId) return;
 
-      await supabase.from('submission_tags').delete().eq('submission_id', currentDeleteId);
-      await supabase.from('submissions').delete().eq('id', currentDeleteId);
+    await supabase.from('submission_tags').delete().eq('submission_id', currentDeleteId);
+    await supabase.from('submissions').delete().eq('id', currentDeleteId);
 
-      bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
-      alert('Статья удалена');
-      location.reload();
-    });
+    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    alert('Статья удалена');
+    location.reload();
+  });
 
-    checkSession();
+  checkSession();
   </script>
 
   <!-- Стили только для dashboard — переопределяют styles.css -->
@@ -254,3 +255,4 @@
   </style>
 </body>
 </html>
+
