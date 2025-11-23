@@ -11,24 +11,26 @@
 </head>
 <body class="index-page">
 
-  <!-- Hero — только заголовок слева, без перегрузки -->
-  <section class="py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <!-- Hero — заголовок слева, белый, с полным текстом -->
+  <section class="py-5 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="container py-5">
       <div class="row">
-        <div class="col-lg-8">
-          <h1 class="display-3 fw-bold text-white mb-2">
-            Журнал UZ
-          </h1>
-          <p class="lead text-white fs-4 mb-0 opacity-90">
+        <div class="col-lg-9">
+          <h1 class="display-3 fw-bold text-white mb-3">Журнал UZ</h1>
+          <p class="lead fs-3 text-white mb-3">
             Научный рецензируемый журнал Узбекистана
+          </p>
+          <p class="fs-5 text-white opacity-90">
+            Публикация оригинальных научных статей • Открытый доступ • Двойное слепое рецензирование
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Основной контент -->
+  <!-- Основной контент — чёрные заголовки -->
   <div class="container my-5">
+
     <!-- Поиск -->
     <div class="row mb-5">
       <div class="col-md-8 mx-auto">
@@ -40,9 +42,9 @@
     </div>
 
     <div class="row">
-      <!-- Теги слева -->
+      <!-- Теги слева — заголовок чёрный -->
       <div class="col-lg-3 mb-5">
-        <h5 class="fw-bold mb-4 text-primary">Направления науки</h5>
+        <h5 class="fw-bold mb-4">Направления науки</h5>
         <div id="tagsCloud" class="bg-light p-4 rounded-3 shadow-sm">
           <div class="text-center text-muted">
             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -51,9 +53,9 @@
         </div>
       </div>
 
-      <!-- Статьи справа -->
+      <!-- Статьи справа — заголовок чёрный -->
       <div class="col-lg-9">
-        <h3 class="fw-bold mb-4 text-primary">Опубликованные статьи</h3>
+        <h3 class="fw-bold mb-4">Опубликованные статьи</h3>
         <div id="articlesList" class="row g-4"></div>
         
         <div id="noResults" class="text-center py-5 d-none">
@@ -182,7 +184,7 @@
     }
     .hover-shadow:hover {
       transform: translateY(-4px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.12) !important;
     }
   </style>
 </body>
