@@ -18,7 +18,7 @@
 
   <div class="container mt-5">
     <div class="card mx-auto shadow-lg" style="max-width: 420px; border-radius: 20px;">
-      <div class="card-header text-center bg-primary text-white rounded-top" style="border-radius: 20px 20px 0 0;">
+      <div class="card-header text-center bg-primary text-white rounded-top">
         <h3 class="my-3" id="formTitle">Вход в систему</h3>
       </div>
       <div class="card-body p-4">
@@ -36,10 +36,10 @@
             <div class="invalid-feedback">Пароль должен быть не менее 6 символов</div>
           </div>
 
-          <!-- Поле "Повторить пароль" — видно только при регистрации -->
-          <div class="mb-3" id="confirmPasswordGroup">
+          <!-- Поле "Повторить пароль" — ИЗНАЧАЛЬНО СКРЫТО -->
+          <div class="mb-3" id="confirmPasswordGroup" style="display: none;">
             <label class="form-label fw-semibold">Повторите пароль</label>
-            <input type="password" class="form-control form-control-lg" id="confirmPassword" required>
+            <input type="password" class="form-control form-control-lg" id="confirmPassword">
             <div class="invalid-feedback" id="passwordMismatch">Пароли не совпадают</div>
           </div>
 
@@ -50,7 +50,7 @@
 
         <div class="mt-4 text-center">
           <button type="button" class="btn btn-link text-decoration-none" id="toggleBtn">
-            Нет аккаунта? Зарегистрируйтесь
+            Нет аккаунта? <strong>Зарегистрируйтесь</strong>
           </button>
         </div>
       </div>
@@ -73,10 +73,7 @@
 
     let isLogin = true;
 
-    // Переключение между входом и регистрацией
-    toggleBtn.addEventListener('click', () => {
-      isLogin = !isLogin;
-
+    function updateFormMode() {
       if (isLogin) {
         formTitle.textContent = 'Вход в систему';
         submitBtn.textContent = 'Войти';
@@ -90,49 +87,54 @@
         confirmGroup.style.display = 'block';
         confirmInput.setAttribute('required', '');
       }
+    }
 
-      // Сброс формы
+    // Инициализация — по умолчанию ВХОД
+    updateFormMode();
+
+    // Переключение
+    toggleBtn.addEventListener('click', () => {
+      isLogin = !isLogin;
+      updateFormMode();
       authForm.reset();
       authForm.classList.remove('was-validated');
+      document.getElementById('passwordMismatch').style.display = 'none';
     });
 
-    // Валидация формы
+    // Отправка формы
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      // Сброс предыдущих ошибок
-      authForm.classList.remove('was-validated');
-      document.getElementById('passwordMismatch').style.display = 'none';
 
       const email = document.getElementById('email').value.trim();
       const password = passwordInput.value;
 
-      // Проверка совпадения паролей (только при регистрации)
-      if (!isLogin && password !== confirmInput.value) {
-        authForm.classList.add('was-validated');
-        document.getElementById('passwordMismatch').style.display = 'block';
-        confirmInput.setCustomValidity('Пароли не совпадают');
-        return;
-      } else {
-        confirmInput.setCustomValidity('');
+      // Валидация паролей при регистрации
+      if (!isLogin) {
+        if (password !== confirmInput.value) {
+          confirmInput.setCustomValidity('Пароли не совпадают');
+          authForm.classList.add('was-validated');
+          document.getElementById('passwordMismatch').style.display = 'block';
+          return;
+        } else {
+          confirmInput.setCustomValidity('');
+        }
       }
 
       try {
-        let result, error;
+        let result;
 
         if (isLogin) {
           result = await supabase.auth.signInWithPassword({ email, password });
         } else {
           result = await supabase.auth.signUp({ email, password });
           if (result.data.user) {
-            alert('Регистрация успешна! Проверьте email для подтверждения.');
+            alert('Регистрация успешна! Проверьте почту для подтверждения.');
           }
         }
 
-        error = result.error;
-        if (error) throw error;
+        if (result.error) throw result.error;
 
-        const user = result.data.user;
+        const user = result.data.user || result.data.session?.user;
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
@@ -141,13 +143,12 @@
             .single();
 
           if (!profile || !profile.full_name) {
-            location.href = 'profile.html'; // Заполнить имя
+            location.href = 'profile.html';
           } else {
-            // Редирект по роли
             if (profile.role === 'admin') location.href = 'admin.html';
             else if (profile.role === 'reviewer') location.href = 'review.html';
             else if (profile.role === 'reader') location.href = 'index.html';
-            else location.href = 'dashboard.html'; // авторы и остальные
+            else location.href = 'dashboard.html';
           }
         }
       } catch (err) {
@@ -155,7 +156,7 @@
       }
     });
 
-    // Bootstrap валидация в реальном времени
+    // Валидация в реальном времени
     authForm.addEventListener('input', () => {
       authForm.classList.add('was-validated');
     });
@@ -166,11 +167,12 @@
       display: none;
     }
     .card {
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
     }
     .btn-primary {
       background: #667eea;
       border: none;
+      font-weight: 600;
     }
     .btn-primary:hover {
       background: #5a6fd8;
