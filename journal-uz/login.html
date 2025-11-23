@@ -7,9 +7,15 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <!-- Самый стабильный способ подключить Supabase — через jsDelivr -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    window.createSupabaseClient = createClient;
+  </script>
 </head>
 <body class="bg-light">
 
+  <!-- Весь HTML остаётся тот же (ниже) -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
     <div class="container">
       <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
@@ -36,7 +42,6 @@
             <div class="invalid-feedback">Пароль должен быть не менее 6 символов</div>
           </div>
 
-          <!-- Поле "Повторить пароль" — ИЗНАЧАЛЬНО СКРЫТО -->
           <div class="mb-3" id="confirmPasswordGroup" style="display: none;">
             <label class="form-label fw-semibold">Повторите пароль</label>
             <input type="password" class="form-control form-control-lg" id="confirmPassword">
@@ -58,10 +63,10 @@
   </div>
 
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Теперь используем уже загруженный createClient из jsDelivr — 100% без QUIC ошибок
+    const supabase = window.createSupabaseClient(supabaseUrl, supabaseKey);
 
     const formTitle = document.getElementById('formTitle');
     const submitBtn = document.getElementById('submitBtn');
@@ -89,10 +94,8 @@
       }
     }
 
-    // Инициализация — по умолчанию ВХОД
     updateFormMode();
 
-    // Переключение
     toggleBtn.addEventListener('click', () => {
       isLogin = !isLogin;
       updateFormMode();
@@ -101,23 +104,19 @@
       document.getElementById('passwordMismatch').style.display = 'none';
     });
 
-    // Отправка формы
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const email = document.getElementById('email').value.trim();
       const password = passwordInput.value;
 
-      // Валидация паролей при регистрации
-      if (!isLogin) {
-        if (password !== confirmInput.value) {
-          confirmInput.setCustomValidity('Пароли не совпадают');
-          authForm.classList.add('was-validated');
-          document.getElementById('passwordMismatch').style.display = 'block';
-          return;
-        } else {
-          confirmInput.setCustomValidity('');
-        }
+      if (!isLogin && password !== confirmInput.value) {
+        confirmInput.setCustomValidity('Пароли не совпадают');
+        authForm.classList.add('was-validated');
+        document.getElementById('passwordMismatch').style.display = 'block';
+        return;
+      } else {
+        confirmInput.setCustomValidity('');
       }
 
       try {
@@ -127,9 +126,7 @@
           result = await supabase.auth.signInWithPassword({ email, password });
         } else {
           result = await supabase.auth.signUp({ email, password });
-          if (result.data.user) {
-            alert('Регистрация успешна! Проверьте почту для подтверждения.');
-          }
+          if (result.data.user) alert('Регистрация успешна! Проверьте почту для подтверждения.');
         }
 
         if (result.error) throw result.error;
@@ -156,27 +153,16 @@
       }
     });
 
-    // Валидация в реальном времени
     authForm.addEventListener('input', () => {
       authForm.classList.add('was-validated');
     });
   </script>
 
   <style>
-    .invalid-feedback#passwordMismatch {
-      display: none;
-    }
-    .card {
-      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-    }
-    .btn-primary {
-      background: #667eea;
-      border: none;
-      font-weight: 600;
-    }
-    .btn-primary:hover {
-      background: #5a6fd8;
-    }
+    .invalid-feedback#passwordMismatch { display: none; }
+    .card { box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+    .btn-primary { background: #667eea; border: none; font-weight: 600; }
+    .btn-primary:hover { background: #5a6fd8; }
   </style>
 </body>
 </html>
