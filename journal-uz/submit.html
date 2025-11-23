@@ -107,27 +107,35 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
     let selectedTagIds = [];
-    let currentArticleId = null;
+    let allTags = [];  // Глобальный массив тегов
     let isEditMode = false;
+    let currentArticleId = null;
 
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit');
 
-    // ГЛОБАЛЬНЫЙ КЭШ ТЕГОВ — вот в чём была вся проблема!
-    let allTagsCache = null;
+    // Загружаем все теги один раз
+    async function loadAllTags() {
+      if (allTags.length > 0) return;
+      const { data, error } = await supabase
+        .from('tags')
+        .select('id, name, category')
+        .order('category')
+        .order('name');
 
-    async function getAllTags() {
-      if (allTagsCache) return allTagsCache;
-      const { data } = await supabase.from('tags').select('id, name, category').order('category').order('name');
-      allTagsCache = data || [];
-      return allTagsCache;
+      if (error) {
+        console.error('Ошибка загрузки тегов:', error);
+        return;
+      }
+      allTags = data || [];
     }
 
-    async function renderTagsModal() {
-      const tags = await getAllTags();
+    // Рендерим модалку с тегами
+    function renderTagsModal() {
       const categories = {};
-      tags.forEach(t => {
+      allTags.forEach(t => {
         if (!categories[t.category]) categories[t.category] = [];
         categories[t.category].push(t);
       });
@@ -151,7 +159,7 @@
 
       // Обработчик чекбоксов
       container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.onchange = () => {
+        cb.addEventListener('change', () => {
           const id = cb.value;
           if (cb.checked && selectedTagIds.length < 5) {
             selectedTagIds.push(id);
@@ -163,24 +171,24 @@
           }
           document.getElementById('selectedCount').textContent = selectedTagIds.length;
           updateSelectedTagsDisplay();
-        };
+        });
       });
     }
 
+    // Обновляем отображение выбранных тегов
     function updateSelectedTagsDisplay() {
       const container = document.getElementById('selectedTags');
       if (selectedTagIds.length === 0) {
         container.innerHTML = '<small class="text-muted">Нажмите кнопку ниже, чтобы выбрать теги</small>';
       } else {
-        const tags = allTagsCache || [];
         container.innerHTML = selectedTagIds.map(id => {
-          const tag = tags.find(t => t.id === id);
+          const tag = allTags.find(t => t.id === id);
           return `<span class="badge bg-primary fs-6 px-3 py-2 me-2 mb-2">${tag ? tag.name : 'Тег'}</span>`;
         }).join('');
       }
     }
 
-    // Загрузка статьи при редактировании
+    // Загрузка статьи для редактирования
     async function loadForEdit(id) {
       const { data: article } = await supabase.from('submissions').select('*').eq('id', id).single();
       const { data: links } = await supabase.from('submission_tags').select('tag_id').eq('submission_id', id);
@@ -191,15 +199,8 @@
       document.getElementById('editId').value = id;
 
       selectedTagIds = links ? links.map(l => l.tag_id) : [];
-      updateSelectedTagsDisplay();
-
-      // Загружаем теги и отмечаем выбранные
-      await getAllTags();
-      renderTagsModal();
-      selectedTagIds.forEach(id => {
-        const cb = document.getElementById(`tag-${id}`);
-        if (cb) cb.checked = true;
-      });
+      await loadAllTags();           // Ждём загрузки тегов
+      updateSelectedTagsDisplay();   // Теперь точно будет правильное название
       document.getElementById('selectedCount').textContent = selectedTagIds.length;
 
       document.getElementById('loadingScreen').remove();
@@ -215,15 +216,16 @@
       loadForEdit(editId);
     } else {
       document.getElementById('loadingScreen').remove();
+      loadAllTags(); // Просто подгружаем теги заранее
     }
 
-    // Открытие модалки — теперь всегда работает
+    // Открываем модалку — теги всегда будут
     document.getElementById('tagsModal').addEventListener('shown.bs.modal', async () => {
-      if (!allTagsCache) await getAllTags();
+      await loadAllTags();
       renderTagsModal();
     });
 
-    // Отправка
+    // Отправка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (selectedTagIds.length === 0) return alert('Выберите хотя бы один тег!');
