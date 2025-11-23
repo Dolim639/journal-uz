@@ -64,31 +64,27 @@
       </div>
     </div>
   </div>
-
-  <!-- Модальное окно выбора тегов -->
-  <div class="modal fade" id="tagsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Выберите теги для статьи</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Модальное окно выбора тегов — с группировкой по наукам -->
+<div class="modal fade" id="tagsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Выберите теги (до 5)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="tagsModalBody">
+        <div class="text-center">
+          <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>
         </div>
-        <div class="modal-body">
-          <div id="allTags" class="row g-3">
-            <div class="col-12 text-center">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Загрузка...</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <small class="me-auto">Выбрано: <span id="selectedCount">0</span>/5</small>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Готово</button>
       </div>
     </div>
   </div>
+</div>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -113,46 +109,63 @@
     }
     checkSession();
 
-    // Загрузка всех тегов при открытии модалки
-    document.getElementById('tagsModal').addEventListener('show.bs.modal', async () => {
-      const { data: tags, error } = await supabase
-        .from('tags')
-        .select('id, name')
-        .order('name');
+   let selectedTagIds = [];
 
-      if (error) {
-        document.getElementById('allTags').innerHTML = `<p class="text-danger">Ошибка загрузки тегов</p>`;
-        return;
-      }
+// Загрузка тегов с группировкой по категориям
+async function loadTagsForSubmit() {
+  const { data: tags } = await supabase
+    .from('tags')
+    .select('id, name, category')
+    .order('category')
+    .order('name');
 
-      if (!tags || tags.length === 0) {
-        document.getElementById('allTags').innerHTML = `<p class="text-muted">Администратор ещё не добавил теги</p>`;
-        return;
-      }
+  const categories = {};
+  tags.forEach(t => {
+    if (!categories[t.category]) categories[t.category] = [];
+    categories[t.category].push(t);
+  });
 
-      document.getElementById('allTags').innerHTML = tags.map(tag => `
-        <div class="col-md-4">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="${tag.id}" id="tag-${tag.id}"
-              ${selectedTagIds.includes(tag.id) ? 'checked' : ''}>
-            <label class="form-check-label" for="tag-${tag.id}">${tag.name}</label>
+  const container = document.getElementById('tagsModalBody');
+  container.innerHTML = Object.keys(categories).map(cat => `
+    <div class="mb-4">
+      <h6 class="fw-bold text-primary border-bottom pb-2">${cat}</h6>
+      <div class="row row-cols-2 row-cols-md-3 g-3">
+        ${categories[cat].map(t => `
+          <div class="col">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="${t.id}" id="tag-${t.id}">
+              <label class="form-check-label" for="tag-${t.id}">${t.name}</label>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 
-      // Обработчики чекбоксов
-      document.querySelectorAll('#allTags input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-          const id = checkbox.value;
-          if (checkbox.checked) {
-            if (!selectedTagIds.includes(id)) selectedTagIds.push(id);
-          } else {
-            selectedTagIds = selectedTagIds.filter(t => t !== id);
-          }
-          updateSelectedTagsDisplay();
-        });
-      });
+  // Обработчик выбора тегов
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.value;
+      if (cb.checked && selectedTagIds.length < 5) {
+        selectedTagIds.push(id);
+      } else if (!cb.checked) {
+        selectedTagIds = selectedTagIds.filter(x => x !== id);
+      } else {
+        cb.checked = false;
+        alert('Максимум 5 тегов!');
+      }
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
+      updateSelectedTagsDisplay();
     });
+  });
+}
+
+// Вызов при открытии модалки
+document.querySelector('[data-bs-target="#tagsModal"]').addEventListener('click', () => {
+  if (document.getElementById('tagsModalBody').innerHTML.includes('spinner')) {
+    loadTagsForSubmit();
+  }
+});
 
     // Обновление отображения выбранных тегов
     function updateSelectedTagsDisplay() {
@@ -269,4 +282,5 @@
   </script>
 </body>
 </html>
+
 
