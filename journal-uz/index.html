@@ -85,70 +85,87 @@
 
     // Загрузка всех опубликованных статей
     async function loadArticles(query = '') {
-      let sql = supabase.from('submissions')
-        .select('id, title, authors, abstract, file_url, views, submitted_at')
-        .eq('status', 'Опубликована')
-        .order('submitted_at', { ascending: false });
+  let sql = supabase.from('submissions')
+    .select('id, title, authors, abstract, file_url, views, submitted_at')
+    .eq('status', 'Опубликована')
+    .order('submitted_at', { ascending: false });
 
-      if (query) {
-        const q = query.toLowerCase();
-        // Поиск по названию и аннотации
-        sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%`);
+  if (query) {
+    const q = query.toLowerCase();
+    sql = sql.or(`title.ilike.%${q}%, abstract.ilike.%${q}%`);
 
-        // Поиск по тегам
-        const { data: tagData } = await supabase.from('tags').select('id').ilike('name', `%${q}%`);
-        if (tagData && tagData.length > 0) {
-          const tagIds = tagData.map(t => t.id);
-          const { data: linked } = await supabase.from('submission_tags').select('submission_id').in('tag_id', tagIds);
-          if (linked && linked.length > 0) {
-            const ids = linked.map(l => l.submission_id);
-            sql = sql.or(`id.in.(${ids.join(',')})`);
-          }
-        }
+    const { data: tagData } = await supabase.from('tags').select('id').ilike('name', `%${q}%`);
+    if (tagData && tagData.length > 0) {
+      const tagIds = tagData.map(t => t.id);
+      const { data: linked } = await supabase.from('submission_tags').select('submission_id').in('tag_id', tagIds);
+      if (linked && linked.length > 0) {
+        const ids = linked.map(l => l.submission_id);
+        sql = sql.or(`id.in.(${ids.join(',')})`);
       }
+    }
+  }
 
-      const { data: articles, error } = await sql;
+  const { data: articles } = await sql;
 
-      if (error) {
-        console.error(error);
-        document.getElementById('articlesList').innerHTML = '<p class="text-danger col-12">Ошибка загрузки статей</p>';
-        return;
-      }
+  const list = document.getElementById('articlesList');
+  const noRes = document.getElementById('noResults');
 
-      const list = document.getElementById('articlesList');
-      const noRes = document.getElementById('noResults');
+  if (!articles || articles.length === 0) {
+    list.innerHTML = '';
+    noRes.classList.remove('d-none');
+    return;
+  }
 
-      if (!articles || articles.length === 0) {
-        list.innerHTML = '';
-        noRes.classList.remove('d-none');
-        return;
-      }
+  noRes.classList.add('d-none');
 
-      noRes.classList.add('d-none');
-      list.innerHTML = articles.map(a => `
-        <div class="col-md-12 mb-4">
-          <div class="card h-100 shadow-sm hover-shadow">
-            <div class="card-body">
-              <h5 class="card-title fw-bold">
-                <a href="${a.file_url}" target="_blank" class="text-primary text-decoration-none" onclick="incrementViews('${a.id}')">
-                  ${a.title}
-                </a>
-              </h5>
-              <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
-              <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
-              <div class="d-flex justify-content-between align-items-center mt-3">
-                <small class="text-muted">
-                  <i class="fas fa-calendar me-1"></i> ${new Date(a.submitted_at).toLocaleDateString('ru')}
-                  <span class="ms-3"><i class="fas fa-eye me-1"></i> ${a.views || 0}</span>
-                </small>
-                <a href="${a.file_url}" target="_blank" class="btn btn-outline-primary btn-sm" onclick="incrementViews('${a.id}')">
-                  Читать PDF
-                </a>
-              </div>
+  // ← ВАЖНО: Загружаем теги для каждой статьи
+  const allTagLinks = await supabase.from('submission_tags').select('submission_id, tag_id');
+  const tagMap = {};
+  if (allTagLinks.data) {
+    for (const link of allTagLinks.data) {
+      if (!tagMap[link.submission_id]) tagMap[link.submission_id] = [];
+      tagMap[link.submission_id].push(link.tag_id);
+    }
+  }
+
+  const { data: allTags } = await supabase.from('tags').select('id, name');
+
+  list.innerHTML = articles.map(a => {
+    const articleTags = (tagMap[a.id] || []).map(tagId => {
+      const tag = allTags.find(t => t.id === tagId);
+      return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-secondary text-decoration-none me-1">${tag.name}</a>` : '';
+    }).join('');
+
+    return `
+      <div class="col-md-12 mb-4">
+        <div class="card h-100 shadow-sm hover-shadow">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">
+              <a href="article.html?id=${a.id}" class="text-primary text-decoration-none">
+                ${a.title}
+              </a>
+            </h5>
+            <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+            <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
+            
+            <div class="mb-3">
+              ${articleTags || '<small class="text-muted">Теги не указаны</small>'}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <small class="text-muted">
+                <i class="fas fa-calendar me-1"></i> ${new Date(a.submitted_at).toLocaleDateString('ru')}
+                <span class="ms-3"><i class="fas fa-eye me-1"></i> ${a.views || 0}</span>
+              </small>
+              <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">
+                Читать полностью
+              </a>
             </div>
           </div>
         </div>
-      `).join('');
+      </div>
+    `;
+  }).join('');
     }
 
     window.incrementViews = async (id) => {
@@ -162,4 +179,5 @@
   </script>
 </body>
 </html>
+
 
