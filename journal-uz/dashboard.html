@@ -143,15 +143,15 @@
                   </a>
                 </div>
 
-                <!-- Чистые прозрачные иконки — без фона! -->
+                <!-- ЧИСТЫЕ ИКОНКИ Font Awesome — без фона, только карандашик и мусорка -->
                 <div class="action-icons">
                   ${canEdit ? `
-                    <a href="submit.html?edit=${item.id}" class="icon-btn edit-icon" title="Редактировать">
+                    <a href="submit.html?edit=${item.id}" class="text-warning fs-4" title="Редактировать">
                       Редактировать
                     </a>
                   ` : ''}
                   ${canDelete ? `
-                    <button class="icon-btn delete-icon" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
+                    <button class="text-danger fs-4" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
                       Удалить
                     </button>
                   ` : ''}
@@ -212,7 +212,7 @@
       transform: translateY(0);
     }
 
-    /* Чистые иконки без фона — только карандашик и мусорка */
+    /* ЧИСТЫЕ ПРОЗРАЧНЫЕ ИКОНКИ — только карандашик и мусорка */
     .action-icons {
       position: absolute;
       top: 15px;
@@ -222,39 +222,29 @@
       transition: all 0.3s ease;
       z-index: 10;
       display: flex;
-      gap: 12px;
+      gap: 18px;
     }
 
-    .icon-btn {
-      width: 48px;
-      height: 48px;
-      background: rgba(255, 255, 255, 0.9);
+    .action-icons a,
+    .action-icons button {
+      background: none;
       border: none;
+      font-size: 1.6rem;
+      padding: 8px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      color: #333;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       transition: all 0.2s ease;
+      cursor: pointer;
     }
 
-    .edit-icon {
-      color: #f59e0b;
+    .action-icons a:hover {
+      background: rgba(255, 193, 7, 0.2);
+      transform: scale(1.2);
     }
 
-    .delete-icon {
-      color: #ef4444;
+    .action-icons button:hover {
+      background: rgba(239, 68, 68, 0.2);
+      transform: scale(1.2);
     }
-
-    .icon-btn:hover {
-      transform: scale(1.15);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-    }
-
-    .edit-icon:hover { background: #fff3cd; }
-    .delete-icon:hover { background: #fee2e2; }
   </style>
 </body>
 </html>
