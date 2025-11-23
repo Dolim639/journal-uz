@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Профиль</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <div class="navbar-nav ms-auto">
+        <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
+      </div>
+    </div>
+  </nav>
+  <div class="container mt-5">
+    <div class="card mx-auto" style="max-width: 400px;">
+      <div class="card-header"><h3>Заполните ваше имя</h3></div>
+      <div class="card-body">
+        <form id="profileForm">
+          <div class="mb-3">
+            <label class="form-label">Полное имя</label>
+            <input type="text" class="form-control" id="fullName" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Сохранить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'login.html';
+      });
+
+      // Загружаем текущий профиль
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile && profile.full_name) {
+        window.location.href = 'dashboard.html';  // Уже заполнено — на дашборд
+        return;
+      }
+
+      // Если пусто — показываем форму
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fullName = document.getElementById('fullName').value;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName, updated_at: new Date().toISOString() })
+        .eq('id', session.user.id);
+
+      if (error) {
+        alert('Ошибка: ' + error.message);
+      } else {
+        alert('Имя сохранено!');
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    checkSession();
+  </script>
+</body>
+
+</html>
