@@ -11,6 +11,7 @@
 </head>
 <body class="index-page">
 
+  <!-- Hero -->
   <section class="py-5 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
     <div class="container py-5">
       <div class="row">
@@ -26,6 +27,7 @@
   </section>
 
   <div class="container my-5">
+    <!-- Поиск -->
     <div class="row mb-5">
       <div class="col-md-8 mx-auto">
         <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden">
@@ -36,6 +38,7 @@
     </div>
 
     <div class="row">
+      <!-- Теги слева -->
       <div class="col-lg-3 mb-5">
         <h5 class="fw-bold mb-4">Направления науки</h5>
         <div id="tagsCloud" class="bg-light p-4 rounded-3 shadow-sm">
@@ -46,6 +49,7 @@
         </div>
       </div>
 
+      <!-- Статьи справа -->
       <div class="col-lg-9">
         <h3 class="fw-bold mb-4">Опубликованные статьи</h3>
         <div id="articlesList" class="row g-4"></div>
@@ -57,131 +61,124 @@
     </div>
   </div>
 
-<script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-  import { supabaseUrl, supabaseKey } from './supabase-config.js';
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-  window.goToTag = (tag) => {
-    window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
-  };
+    window.goToTag = (tag) => {
+      window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
+    };
 
-  async function loadTags() {
-    const { data: tags, error } = await supabase
-      .from('tags')
-      .select('id, name, category')  // ← ЯВНО указываем id
-      .order('category')
-      .order('name');
+    async function loadTags() {
+      const { data: tags, error } = await supabase
+        .from('tags')
+        .select('id, name, category')  // ЯВНО указываем id (uuid)
+        .order('category')
+        .order('name');
 
-    const cloud = document.getElementById('tagsCloud');
+      const cloud = document.getElementById('tagsCloud');
 
-    if (error) {
-      cloud.innerHTML = `<p class="text-danger text-center">Ошибка: ${error.message}</p>`;
-      console.error(error);
-      return;
-    }
+      if (error || !tags || tags.length === 0) {
+        cloud.innerHTML = '<p class="text-danger text-center">Теги не загружены</p>';
+        console.error('Ошибка тегов:', error);
+        return;
+      }
 
-    if (!tags || tags.length === 0) {
-      cloud.innerHTML = '<p class="text-muted text-center">Теги не найдены</p>';
-      return;
-    }
+      const categories = {};
+      tags.forEach(t => {
+        if (!categories[t.category]) categories[t.category] = [];
+        categories[t.category].push(t.name);
+      });
 
-    const categories = {};
-    tags.forEach(t => {
-      if (!categories[t.category]) categories[t.category] = [];
-      categories[t.category].push(t.name);
-    });
-
-    cloud.innerHTML = Object.keys(categories).map(cat => `
-      <div class="mb-4">
-        <h6 class="fw-bold text-primary mb-3">${cat}</h6>
-        <div class="d-flex flex-wrap gap-2">
-          ${categories[cat].map(name => `
-            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-2" onclick="goToTag('${name}')">
-              ${name}
-            </button>
-          `).join('')}
+      cloud.innerHTML = Object.keys(categories).map(cat => `
+        <div class="mb-4">
+          <h6 class="fw-bold text-primary mb-3">${cat}</h6>
+          <div class="d-flex flex-wrap gap-2">
+            ${categories[cat].map(name => `
+              <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-2" onclick="goToTag('${name}')">
+                ${name}
+              </button>
+            `).join('')}
+          </div>
         </div>
-      </div>
-    `).join('');
-  }
-
-  // Остальной код loadArticles() остаётся тот же — только добавь .select('id, ...') везде, где есть tags
-  async function loadArticles(query = '') {
-    let sql = supabase.from('submissions')
-      .select('id, title, authors, abstract, file_url, views, submitted_at')
-      .eq('status', 'Опубликована')
-      .order('submitted_at', { ascending: false });
-
-    if (query) {
-      const q = query.toLowerCase();
-      sql = sql.or(`title.ilike.%${q}%, authors.ilike.%${q}%, abstract.ilike.%${q}%`);
+      `).join('');
     }
 
-    const { data: articles } = await sql;
-    const container = document.getElementById('articlesList');
-    const noResults = document.getElementById('noResults');
+    async function loadArticles(query = '') {
+      let sql = supabase.from('submissions')
+        .select('id, title, authors, abstract, file_url, views, submitted_at')
+        .eq('status', 'Опубликована')
+        .order('submitted_at', { ascending: false });
 
-    if (!articles || articles.length === 0) {
-      container.innerHTML = '';
-      noResults.classList.remove('d-none');
-      return;
-    }
+      if (query) {
+        const q = query.toLowerCase();
+        sql = sql.or(`title.ilike.%${q}%, authors.ilike.%${q}%, abstract.ilike.%${q}%`);
+      }
 
-    noResults.classList.add('d-none');
+      const { data: articles } = await sql;
+      const container = document.getElementById('articlesList');
+      const noResults = document.getElementById('noResults');
 
-    // ← ИСПРАВЛЕНИЕ: явно запрашиваем id у тегов
-    const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
-    const { data: allTags } = await supabase.from('tags').select('id, name');
+      if (!articles || articles.length === 0) {
+        container.innerHTML = '';
+        noResults.classList.remove('d-none');
+        return;
+      }
 
-    const tagMap = {};
-    links?.forEach(l => {
-      if (!tagMap[l.submission_id]) tagMap[l.submission_id] = [];
-      const tag = allTags?.find(t => t.id === l.tag_id);
-      if (tag) tagMap[l.submission_id].push(tag.name);
-    });
+      noResults.classList.add('d-none');
 
-    container.innerHTML = articles.map(a => {
-      const articleTags = (tagMap[a.id] || []).map(t => 
-        `<a href="tag.html?tag=${encodeURIComponent(t)}" class="badge bg-primary text-decoration-none me-1">${t}</a>`
-      ).join('');
+      const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
+      const { data: allTags } = await supabase.from('tags').select('id, name');
 
-      return `
-        <div class="col-12 mb-4">
-          <div class="card h-100 shadow-sm border-0 hover-shadow">
-            <div class="card-body">
-              <h5 class="card-title fw-bold">
-                <a href="article.html?id=${a.id}" class="text-primary text-decoration-none stretched-link">
-                  ${a.title}
-                </a>
-              </h5>
-              <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
-              <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
-              ${articleTags ? `<div class="mb-3">${articleTags}</div>` : ''}
-              <div class="d-flex justify-content-between align-items-center mt-4">
-                <small class="text-muted">
-                  ${new Date(a.submitted_at).toLocaleDateString('ru')}
-                  <span class="ms-3">${a.views || 0} просмотров</span>
-                </small>
-                <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">
-                  Читать полностью
-                </a>
+      const tagMap = {};
+      links?.forEach(l => {
+        if (!tagMap[l.submission_id]) tagMap[l.submission_id] = [];
+        const tag = allTags?.find(t => t.id === l.tag_id);
+        if (tag) tagMap[l.submission_id].push(tag.name);
+      });
+
+      container.innerHTML = articles.map(a => {
+        const articleTags = (tagMap[a.id] || []).map(t => 
+          `<a href="tag.html?tag=${encodeURIComponent(t)}" class="badge bg-primary text-decoration-none me-1">${t}</a>`
+        ).join('');
+
+        return `
+          <div class="col-12 mb-4">
+            <div class="card h-100 shadow-sm border-0 hover-shadow">
+              <div class="card-body">
+                <h5 class="card-title fw-bold">
+                  <a href="article.html?id=${a.id}" class="text-primary text-decoration-none stretched-link">
+                    ${a.title}
+                  </a>
+                </h5>
+                <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+                <p class="card-text text-muted">${a.abstract.substring(0, 250)}...</p>
+                ${articleTags ? `<div class="mb-3">${articleTags}</div>` : ''}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                  <small class="text-muted">
+                    ${new Date(a.submitted_at).toLocaleDateString('ru')}
+                    <span class="ms-3">${a.views || 0} просмотров</span>
+                  </small>
+                  <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">
+                    Читать полностью
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      `;
-    }).join('');
-  }
+        `;
+      }).join('');
+    }
 
-  document.getElementById('searchInput').addEventListener('input', e => {
-    loadArticles(e.target.value.trim());
-  });
+    document.getElementById('searchInput').addEventListener('input', e => {
+      loadArticles(e.target.value.trim());
+    });
 
-  loadTags();
-  loadArticles();
-</script>
+    loadTags();
+    loadArticles();
+  </script>
 
   <style>
     .hover-shadow { transition: all 0.3s ease; }
@@ -189,4 +186,3 @@
   </style>
 </body>
 </html>
-
