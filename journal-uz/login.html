@@ -40,14 +40,13 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Supabase готов!');
 
     const formTitle = document.getElementById('formTitle');
     const submitBtn = document.getElementById('submitBtn');
     const toggleBtn = document.getElementById('toggleBtn');
     const authForm = document.getElementById('authForm');
 
-    let isLogin = true;  // true = вход, false = регистрация
+    let isLogin = true;
 
     toggleBtn.addEventListener('click', () => {
       isLogin = !isLogin;
@@ -58,49 +57,39 @@
 
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
 
       try {
-        let data, error;
-        if (isLogin) {
-          // Вход
-          ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
-        } else {
-          // Регистрация
-          ({ data, error } = await supabase.auth.signUp({ email, password }));
-          if (data.user && !error) {
-            alert('Проверьте email для подтверждения (если включено)');
-          }
-        }
+        let { data, error } = isLogin 
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password });
 
         if (error) throw error;
 
+        if (!isLogin && data.user) alert('Проверьте email для подтверждения');
+
         if (data.user) {
-          // Проверяем сессию (для регистрации может быть задержка)
-          await supabase.auth.getSession();  // Обновляем сессию
-
-          alert(isLogin ? 'Вход успешен!' : 'Регистрация успешна!');
-
-          // Проверяем, заполнено ли имя
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, role')
             .eq('id', data.user.id)
             .single();
 
           if (!profile || !profile.full_name) {
-            window.location.href = 'profile.html';  // На заполнение имени
+            window.location.href = 'profile.html';
           } else {
-            window.location.href = 'dashboard.html';
+            // Редирект по роли
+            if (profile.role === 'admin') window.location.href = 'admin.html';
+            else if (profile.role === 'reviewer') window.location.href = 'review.html';
+            else if (profile.role === 'reader') window.location.href = 'index.html';
+            else window.location.href = 'dashboard.html'; // для 'author' или других
           }
         }
       } catch (error) {
-        console.error(error);
         alert('Ошибка: ' + error.message);
       }
     });
   </script>
 </body>
 </html>
-
