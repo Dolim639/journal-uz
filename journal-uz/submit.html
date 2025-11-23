@@ -20,6 +20,14 @@
     </div>
   </nav>
 
+  <!-- Экран загрузки -->
+  <div id="loadingScreen" class="position-fixed top-0 start-0 w-100 h-100 bg-white d-flex align-items-center justify-content-center" style="z-index: 9999;">
+    <div class="text-center">
+      <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;"></div>
+      <h4 class="mt-4 text-primary">Загрузка статьи...</h4>
+    </div>
+  </div>
+
   <div class="container mt-5">
     <div class="card shadow-lg border-0">
       <div class="card-header bg-primary text-white text-center">
@@ -49,13 +57,13 @@
             <div id="selectedTags" class="d-flex flex-wrap gap-2 mb-3">
               <small class="text-muted">Выберите теги ниже</small>
             </div>
-            <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#tagsModal">
+            <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#tagsModal" id="openTagsBtn">
               Выбрать теги
             </button>
           </div>
 
           <div class="mb-5">
-            <label class="form-label fw-bold">PDF-файл статьи (макс. 20 МБ) <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold">PDF-файл статьи (макс. 20 МБ)</label>
             <input type="file" class="form-control form-control-lg" id="file" accept=".pdf">
             <small class="text-muted">Оставьте пустым, если не хотите менять файл</small>
           </div>
@@ -100,22 +108,27 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     let selectedTagIds = [];
+    let allTags = []; // Храним все теги для правильного отображения
     let isEditMode = false;
     let currentArticleId = null;
 
-    // Получаем ID из URL
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit');
 
-    async function loadTags() {
+    async function loadAllTags() {
       const { data: tags } = await supabase
         .from('tags')
         .select('id, name, category')
         .order('category')
         .order('name');
 
+      allTags = tags || [];
+      renderTagsModal();
+    }
+
+    function renderTagsModal() {
       const categories = {};
-      tags.forEach(t => {
+      allTags.forEach(t => {
         if (!categories[t.category]) categories[t.category] = [];
         categories[t.category].push(t);
       });
@@ -128,7 +141,7 @@
             ${categories[cat].map(t => `
               <div class="col">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" value="${t.id}" id="tag-${t.id}">
+                  <input class="form-check-input" type="checkbox" value="${t.id}" id="tag-${t.id}" ${selectedTagIds.includes(t.id) ? 'checked' : ''}>
                   <label class="form-check-label" for="tag-${t.id}">${t.name}</label>
                 </div>
               </div>
@@ -160,13 +173,12 @@
         container.innerHTML = '<small class="text-muted">Выберите теги ниже</small>';
       } else {
         container.innerHTML = selectedTagIds.map(id => {
-          const label = document.querySelector(`#tag-${id} + label`);
-          return `<span class="badge bg-primary fs-6 px-3 py-2 me-2 mb-2">${label?.textContent || 'Тег'}</span>`;
+          const tag = allTags.find(t => t.id === id);
+          return `<span class="badge bg-primary fs-6 px-3 py-2 me-2 mb-2">${tag ? tag.name : 'Тег'}</span>`;
         }).join('');
       }
     }
 
-    // Загрузка статьи для редактирования
     async function loadArticleForEdit(id) {
       const { data: article } = await supabase
         .from('submissions')
@@ -184,15 +196,20 @@
       document.getElementById('abstract').value = article.abstract;
       document.getElementById('editId').value = id;
 
-      selectedTagIds = tagLinks.map(t => t.tag_id);
+      selectedTagIds = tagLinks ? tagLinks.map(t => t.tag_id) : [];
       updateSelectedTagsDisplay();
-      document.getElementById('selectedCount').textContent = selectedTagIds.length;
 
-      // Отмечаем чекбоксы
+      // Загружаем теги и отмечаем выбранные
+      await loadAllTags();
       selectedTagIds.forEach(id => {
         const cb = document.getElementById(`tag-${id}`);
         if (cb) cb.checked = true;
       });
+
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
+
+      // Скрываем загрузку
+      document.getElementById('loadingScreen').remove();
     }
 
     // Инициализация
@@ -203,9 +220,15 @@
       document.getElementById('formHeader').textContent = 'Редактирование статьи';
       document.getElementById('submitBtnText').textContent = 'Сохранить изменения';
       loadArticleForEdit(editId);
+    } else {
+      document.getElementById('loadingScreen').remove();
+      loadAllTags(); // Просто загружаем теги для новой статьи
     }
 
-    document.getElementById('tagsModal').addEventListener('shown.bs.modal', loadTags);
+    // Открытие модалки — теперь всегда работает
+    document.getElementById('openTagsBtn').addEventListener('click', () => {
+      if (allTags.length === 0) loadAllTags();
+    });
 
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -235,10 +258,8 @@
           const updates = { title, authors, abstract };
           if (fileUrl) updates.file_url = fileUrl;
           await supabase.from('submissions').update(updates).eq('id', currentArticleId);
-
           await supabase.from('submission_tags').delete().eq('submission_id', currentArticleId);
           await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: currentArticleId, tag_id })));
-
           alert('Статья успешно обновлена!');
         } else {
           const fileName = `${Date.now()}_${file.name}`;
@@ -257,7 +278,6 @@
           await supabase.from('submission_tags').insert(selectedTagIds.map(tag_id => ({ submission_id: submission.id, tag_id })));
           alert('Статья успешно подана!');
         }
-
         location.href = 'dashboard.html';
       } catch (err) {
         console.error(err);
