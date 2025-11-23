@@ -43,12 +43,16 @@
     </div>
 
     <div class="row">
-      <!-- Теги -->
-      <div class="col-lg-3 mb-5">
-        <h5 class="fw-bold mb-3">Теги</h5>
-        <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
-      </div>
-
+     <!-- Теги на главной — теперь с категориями -->
+<div class="col-lg-3 mb-5">
+  <h5 class="fw-bold mb-4">Теги по направлениям</h5>
+  <div id="tagsCloud">
+    <div class="text-center text-muted">
+      <div class="spinner-border spinner-border-sm" role="status"></div>
+      <small class="d-block mt-2">Загрузка...</small>
+    </div>
+  </div>
+</div>
       <!-- Статьи -->
       <div class="col-lg-9">
         <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
@@ -68,17 +72,27 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     async function loadTags() {
-      const { data: tags } = await supabase.from('tags').select('id, name').order('name');
-      const cloud = document.getElementById('tagsCloud');
-      cloud.innerHTML = tags && tags.length > 0 
-        ? tags.map(t => `<button class="btn btn-outline-primary btn-sm mb-2" onclick="goToTag('${t.name}')">${t.name}</button>`).join('')
-        : '<small class="text-muted">Тегов пока нет</small>';
-    }
+  const { data: tags } = await supabase.from('tags').select('name, category').order('category').order('name');
+  const categories = {};
+  tags.forEach(t => {
+    if (!categories[t.category]) categories[t.category] = [];
+    categories[t.category].push(t);
+  });
 
-    window.goToTag = (tag) => {
-      window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
-    };
-
+  const cloud = document.getElementById('tagsCloud');
+  cloud.innerHTML = Object.keys(categories).map(cat => `
+    <div class="mb-4">
+      <h6 class="text-primary fw-bold border-bottom pb-2">${cat}</h6>
+      <div class="d-flex flex-wrap gap-2">
+        ${categories[cat].map(t => `
+          <button class="btn btn-outline-primary btn-sm" onclick="goToTag('${t.name}')">
+            ${t.name}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
     async function loadArticles(query = '') {
       let sql = supabase.from('submissions')
         .select('id, title, authors, abstract, file_url, views, submitted_at')
@@ -162,3 +176,4 @@
   </script>
 </body>
 </html>
+
