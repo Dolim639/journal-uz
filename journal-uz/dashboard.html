@@ -15,21 +15,24 @@
       <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
       <div class="navbar-nav ms-auto">
         <a href="submit.html" class="btn btn-success me-3">
-          <i class="fas fa-plus me-2"></i>Подать статью
+          Подать статью
         </a>
         <button class="btn btn-outline-light" id="logoutBtn">
-          <i class="fas fa-sign-out-alt me-2"></i>Выйти
+          Выйти
         </button>
       </div>
     </div>
   </nav>
 
   <div class="container mt-5">
-    <div class="text-center mb-5">
-      <h1 class="display-5 fw-bold text-white bg-primary rounded-3 py-4 shadow-lg">
-        Личный кабинет
+    <!-- Приветствие — большое, жирное, белое, слева -->
+    <div class="mb-5">
+      <h1 class="display-4 fw-bold text-white mb-2" id="greetingText">
+        Привет, <span id="userName">загружается...</span>!
       </h1>
-      <p class="lead mt-3" id="welcomeText">Ваши статьи</p>
+      <h2 class="display-6 fw-bold text-white opacity-90" id="articlesTitle">
+        Ваши статьи
+      </h2>
     </div>
 
     <div id="submissionsList" class="row g-4"></div>
@@ -38,7 +41,7 @@
       <i class="fas fa-file-alt fa-5x text-muted mb-4 opacity-50"></i>
       <h4 class="text-muted">У вас пока нет статей</h4>
       <a href="submit.html" class="btn btn-success btn-lg mt-3">
-        <i class="fas fa-plus me-2"></i>Подать первую статью
+        Подать первую статью
       </a>
     </div>
   </div>
@@ -49,7 +52,7 @@
       <div class="modal-content">
         <div class="modal-header bg-danger text-white">
           <h5 class="modal-title">
-            <i class="fas fa-trash-alt me-2"></i>Удалить статью?
+            Удалить статью?
           </h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
@@ -61,7 +64,7 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
           <button type="button" class="btn btn-danger" id="confirmDelete">
-            <i class="fas fa-trash me-2"></i>Удалить
+            Удалить
           </button>
         </div>
       </div>
@@ -94,13 +97,8 @@
         .single();
 
       if (profile) {
-        document.getElementById('welcomeText').innerHTML = `
-          Ваши статьи<br>
-          <small class="text-muted">Привет, <strong>${profile.full_name}</strong>! Роль: ${profile.role}</small>
-        `;
-
-        if (profile.role === 'admin' && !location.pathname.includes('admin.html')) location.href = 'admin.html';
-        if (profile.role === 'reviewer' && !location.pathname.includes('review.html')) location.href = 'review.html';
+        document.getElementById('userName').textContent = profile.full_name;
+        document.title = `Личный кабинет — ${profile.full_name}`;
       }
 
       loadSubmissions(session.user.id);
@@ -143,23 +141,23 @@
                                         item.status === 'Отклонена' ? 'bg-danger' : 'bg-secondary'}">
                       ${item.status}
                     </span>
-                    <small class="text-muted"><i class="fas fa-eye"></i> ${item.views || 0}</small>
+                    <small class="text-muted">${item.views || 0} просмотров</small>
                   </div>
                   <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-outline-primary w-100 mb-2">
-                    <i class="fas fa-file-pdf"></i> PDF
+                    PDF
                   </a>
                 </div>
 
-                <!-- Кнопки действий — появляются при наведении -->
+                <!-- Кнопки при наведении -->
                 <div class="action-buttons">
                   ${canEdit ? `
                     <a href="submit.html?edit=${item.id}" class="btn btn-sm btn-warning text-white">
-                      <i class="fas fa-edit"></i>
+                      Редактировать
                     </a>
                   ` : ''}
                   ${canDelete ? `
                     <button class="btn btn-sm btn-danger" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')">
-                      <i class="fas fa-trash"></i>
+                      Удалить
                     </button>
                   ` : ''}
                 </div>
@@ -190,35 +188,68 @@
     checkSession();
   </script>
 
+  <!-- Стили только для dashboard — переопределяют styles.css -->
   <style>
-    .hover-card {
+    /* Фон с градиентом */
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      min-height: 100vh;
+    }
+
+    /* Белый текст приветствия — большой и жирный */
+    #greetingText,
+    #articlesTitle {
+      text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      margin-left: -3px;
+    }
+
+    #greetingText {
+      font-size: 3.5rem !important;
+    }
+
+    #articlesTitle {
+      font-size: 2.8rem !important;
+      margin-top: -10px;
+    }
+
+    /* Карточки на градиенте */
+    .card {
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(10px);
+      border-radius: 20px !important;
       transition: all 0.3s ease;
-      cursor: pointer;
     }
+
     .hover-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
     }
+
     .hover-card:hover .action-buttons {
       opacity: 1;
       transform: translateY(0);
     }
+
     .action-buttons {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 15px;
+      right: 15px;
       opacity: 0;
       transform: translateY(-10px);
       transition: all 0.3s ease;
       z-index: 10;
+      gap: 8px;
+      display: flex;
     }
+
     .action-buttons .btn {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 1.1rem;
     }
   </style>
 </body>
