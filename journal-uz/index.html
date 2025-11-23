@@ -79,10 +79,9 @@
         : '<small class="text-muted">Тегов пока нет</small>';
     }
 
-    window.filter = (tag) => {
-      document.getElementById('searchInput').value = tag;
-      loadArticles(tag);
-    };
+   window.filter = (tag) => {
+  window.location.href = `tag.html?tag=${encodeURIComponent(tag)}`;
+};
 
     // Загрузка всех опубликованных статей
     async function loadArticles(query = '') {
@@ -163,3 +162,4 @@
   </script>
 </body>
 </html>
+
