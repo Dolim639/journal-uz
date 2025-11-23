@@ -3,33 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход/Регистрация</title>
+  <title>Вход / Регистрация — Журнал UZ</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
     <div class="container">
-      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
     </div>
   </nav>
+
   <div class="container mt-5">
-    <div class="card mx-auto" style="max-width: 400px;">
-      <div class="card-header"><h3 id="formTitle">Вход</h3></div>
-      <div class="card-body">
-        <form id="authForm">
+    <div class="card mx-auto shadow-lg" style="max-width: 420px; border-radius: 20px;">
+      <div class="card-header text-center bg-primary text-white rounded-top" style="border-radius: 20px 20px 0 0;">
+        <h3 class="my-3" id="formTitle">Вход в систему</h3>
+      </div>
+      <div class="card-body p-4">
+
+        <form id="authForm" novalidate>
           <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" required>
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control form-control-lg" id="email" required>
+            <div class="invalid-feedback">Введите корректный email</div>
           </div>
+
           <div class="mb-3">
-            <label class="form-label">Пароль</label>
-            <input type="password" class="form-control" id="password" required>
+            <label class="form-label fw-semibold">Пароль</label>
+            <input type="password" class="form-control form-control-lg" id="password" required minlength="6">
+            <div class="invalid-feedback">Пароль должен быть не менее 6 символов</div>
           </div>
-          <button type="submit" class="btn btn-primary w-100" id="submitBtn">Войти</button>
+
+          <!-- Поле "Повторить пароль" — видно только при регистрации -->
+          <div class="mb-3" id="confirmPasswordGroup">
+            <label class="form-label fw-semibold">Повторите пароль</label>
+            <input type="password" class="form-control form-control-lg" id="confirmPassword" required>
+            <div class="invalid-feedback" id="passwordMismatch">Пароли не совпадают</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
+            Войти
+          </button>
         </form>
-        <div class="mt-3 text-center">
-          <button type="button" class="btn btn-link" id="toggleBtn">Нет аккаунта? Зарегистрируйтесь</button>
+
+        <div class="mt-4 text-center">
+          <button type="button" class="btn btn-link text-decoration-none" id="toggleBtn">
+            Нет аккаунта? Зарегистрируйтесь
+          </button>
         </div>
       </div>
     </div>
@@ -45,51 +67,114 @@
     const submitBtn = document.getElementById('submitBtn');
     const toggleBtn = document.getElementById('toggleBtn');
     const authForm = document.getElementById('authForm');
+    const confirmGroup = document.getElementById('confirmPasswordGroup');
+    const confirmInput = document.getElementById('confirmPassword');
+    const passwordInput = document.getElementById('password');
 
     let isLogin = true;
 
+    // Переключение между входом и регистрацией
     toggleBtn.addEventListener('click', () => {
       isLogin = !isLogin;
-      formTitle.textContent = isLogin ? 'Вход' : 'Регистрация';
-      submitBtn.textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
-      toggleBtn.textContent = isLogin ? 'Нет аккаунта? Зарегистрируйтесь' : 'Уже есть аккаунт? Войдите';
+
+      if (isLogin) {
+        formTitle.textContent = 'Вход в систему';
+        submitBtn.textContent = 'Войти';
+        toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
+        confirmGroup.style.display = 'none';
+        confirmInput.removeAttribute('required');
+      } else {
+        formTitle.textContent = 'Создание аккаунта';
+        submitBtn.textContent = 'Зарегистрироваться';
+        toggleBtn.innerHTML = 'Уже есть аккаунт? <strong>Войти</strong>';
+        confirmGroup.style.display = 'block';
+        confirmInput.setAttribute('required', '');
+      }
+
+      // Сброс формы
+      authForm.reset();
+      authForm.classList.remove('was-validated');
     });
 
+    // Валидация формы
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Сброс предыдущих ошибок
+      authForm.classList.remove('was-validated');
+      document.getElementById('passwordMismatch').style.display = 'none';
+
       const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      const password = passwordInput.value;
+
+      // Проверка совпадения паролей (только при регистрации)
+      if (!isLogin && password !== confirmInput.value) {
+        authForm.classList.add('was-validated');
+        document.getElementById('passwordMismatch').style.display = 'block';
+        confirmInput.setCustomValidity('Пароли не совпадают');
+        return;
+      } else {
+        confirmInput.setCustomValidity('');
+      }
 
       try {
-        let { data, error } = isLogin 
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password });
+        let result, error;
 
+        if (isLogin) {
+          result = await supabase.auth.signInWithPassword({ email, password });
+        } else {
+          result = await supabase.auth.signUp({ email, password });
+          if (result.data.user) {
+            alert('Регистрация успешна! Проверьте email для подтверждения.');
+          }
+        }
+
+        error = result.error;
         if (error) throw error;
 
-        if (!isLogin && data.user) alert('Проверьте email для подтверждения');
-
-        if (data.user) {
+        const user = result.data.user;
+        if (user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name, role')
-            .eq('id', data.user.id)
+            .eq('id', user.id)
             .single();
 
           if (!profile || !profile.full_name) {
-            window.location.href = 'profile.html';
+            location.href = 'profile.html'; // Заполнить имя
           } else {
             // Редирект по роли
-            if (profile.role === 'admin') window.location.href = 'admin.html';
-            else if (profile.role === 'reviewer') window.location.href = 'review.html';
-            else if (profile.role === 'reader') window.location.href = 'index.html';
-            else window.location.href = 'dashboard.html'; // для 'author' или других
+            if (profile.role === 'admin') location.href = 'admin.html';
+            else if (profile.role === 'reviewer') location.href = 'review.html';
+            else if (profile.role === 'reader') location.href = 'index.html';
+            else location.href = 'dashboard.html'; // авторы и остальные
           }
         }
-      } catch (error) {
-        alert('Ошибка: ' + error.message);
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
       }
     });
+
+    // Bootstrap валидация в реальном времени
+    authForm.addEventListener('input', () => {
+      authForm.classList.add('was-validated');
+    });
   </script>
+
+  <style>
+    .invalid-feedback#passwordMismatch {
+      display: none;
+    }
+    .card {
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .btn-primary {
+      background: #667eea;
+      border: none;
+    }
+    .btn-primary:hover {
+      background: #5a6fd8;
+    }
+  </style>
 </body>
 </html>
