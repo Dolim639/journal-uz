@@ -146,14 +146,13 @@
                 <!-- ЧИСТЫЕ ИКОНКИ — как лупа на главной! -->
                 <div class="action-icons">
                   ${canEdit ? `
-                    <a href="submit.html?edit=${item.id}" class="text-warning" title="Редактировать">
-                      Редактировать
-                    </a>
-                  ` : ''}
-                  ${canDelete ? `
-                    <button type="button" class="text-danger" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
-                      Удалить
-                    </button>
+                   <a href="submit.html?edit=${item.id}" class="text-warning" title="Редактировать">
+  <i class="fa-solid fa-pen"></i>
+</a>
+
+<button type="button" class="text-danger" onclick="confirmDelete('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Удалить">
+  <i class="fa-solid fa-trash"></i>
+</button>
                   ` : ''}
                 </div>
               </div>
@@ -247,3 +246,4 @@
   </style>
 </body>
 </html>
+
