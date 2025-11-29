@@ -18,14 +18,29 @@
   </nav>
 
   <div class="container mt-5">
-    <h2 class="fw-bold mb-4">Управление статьями</h2>
-    <div id="stats" class="row mb-4 g-3"></div>
-    <div class="d-flex justify-content-between mb-3">
-      <button class="btn btn-secondary" id="prevBtn" disabled>Предыдущая</button>
-      <span id="pageInfo">Страница 1</span>
-      <button class="btn btn-secondary" id="nextBtn">Следующая</button>
+    <h2 class="fw-bold mb-4 text-primary">Админ-панель</h2>
+
+    <!-- Вкладки по статусам -->
+    <div class="btn-group mb-4" role="group">
+      <button type="button" class="btn btn-outline-primary active" data-status="Подана">Поданные</button>
+      <button type="button" class="btn btn-outline-primary" data-status="На рецензии">На рецензии</button>
+      <button type="button" class="btn btn-outline-primary" data-status="Принята">Принятые</button>
+      <button type="button" class="btn btn-outline-primary" data-status="Отклонена">Отклонённые</button>
+      <button type="button" class="btn btn-outline-primary" data-status="Опубликована">Опубликованные</button>
     </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4 g-3" id="stats"></div>
+
+    <!-- Список статей -->
     <div id="adminList" class="row g-4"></div>
+
+    <!-- Пагинация -->
+    <div class="d-flex justify-content-center mt-4" id="pagination">
+      <button class="btn btn-secondary me-2" id="prevBtn" disabled>Назад</button>
+      <span class="align-self-center mx-3" id="pageInfo">Страница 1</span>
+      <button class="btn btn-secondary" id="nextBtn">Вперёд</button>
+    </div>
   </div>
 
   <script type="module">
@@ -33,12 +48,14 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let currentStatus = 'Подана';  // по умолчанию
     let currentPage = 1;
     const pageSize = 10;
 
-    // ГЛОБАЛЬНЫЕ ФУНКЦИИ — теперь видны из HTML!
-    window.updateStatus = async (id, status) => {
-      if (status === 'Опубликована') {
+    // Глобальные функции
+    window.updateStatus = async (id, newStatus) => {
+      if (newStatus === 'Опубликована') {
         const year = new Date().getFullYear();
         const { data: last } = await supabase
           .from('submissions')
@@ -60,62 +77,139 @@
           })
           .eq('id', id);
 
-        if (error) return alert('Ошибка: ' + error.message);
+        if (error) return alert('Ошибка публикации: ' + error.message);
         alert(`Статья опубликована! Номер: ${year}-${String(nextNumber).padStart(3, '0')}`);
       } else {
-        const { error } = await supabase.from('submissions').update({ status }).eq('id', id);
+        const { error } = await supabase.from('submissions').update({ status: newStatus }).eq('id', id);
         if (error) return alert('Ошибка: ' + error.message);
-        alert('Статус обновлён');
       }
       loadStats();
-      loadAdmin();
+      loadArticles();
     };
 
     window.assignReviewer = async (id) => {
       const select = document.getElementById(`reviewer-${id}`);
-      const reviewerId = select.value;
+      const reviewerId = select?.value;
       if (!reviewerId) return alert('Выберите рецензента!');
 
-      const { error } = await supabase
-        .from('submissions')
-        .update({ reviewer_id: reviewerId })
-        .eq('id', id);
-
+      const { error } = await supabase.from('submissions').update({ reviewer_id: reviewerId }).eq('id', id);
       if (error) alert('Ошибка: ' + error.message);
-      else alert('Рецензент назначен!');
-      loadAdmin();
+      else alert('Рецензент назначен');
+      loadArticles();
     };
 
-    // Остальной код (checkSession, loadStats, loadAdmin) — без изменений
     async function checkSession() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return window.location.href = 'login.html';
+      if (!session) return location.href = 'login.html';
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
       if (!profile || profile.role !== 'admin') {
         alert('Доступ запрещён!');
-        return window.location.href = 'dashboard.html';
+        return location.href = 'index.html';
       }
 
-      document.getElementById('logoutBtn').onclick = async () => {
-        await supabase.auth.signOut();
-        window.location.href = 'login.html';
-      };
+      document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
 
+      setupTabs();
       loadStats();
-      loadAdmin();
+      loadArticles();
     }
 
-    async function loadStats() { /* ... как раньше ... */ }
-    async function loadAdmin() { /* ... как раньше ... */ }
+    function setupTabs() {
+      document.querySelectorAll('[data-status]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelector('.btn-group .active')?.classList.remove('active');
+          btn.classList.add('active');
+          currentStatus = btn.dataset.status;
+          currentPage = 1;
+          loadArticles();
+        });
+      });
+    }
 
-    document.getElementById('prevBtn').onclick = () => { if (currentPage > 1) currentPage--; loadAdmin(); };
-    document.getElementById('nextBtn').onclick = () => { currentPage++; loadAdmin(); };
+    async function loadStats() {
+      const statuses = ['Подана', 'На рецензии', 'Принята', 'Отклонена', 'Опубликована'];
+      const statsRow = document.getElementById('stats');
+      statsRow.innerHTML = '';
+
+      for (const status of statuses) {
+        const { count } = await supabase.from('submissions').select('id', { count: 'exact' }).eq('status', status);
+        const badgeClass = {
+          'Подана': 'bg-info',
+          'На рецензии': 'bg-warning',
+          'Принята': 'bg-primary',
+          'Отклонена': 'bg-danger',
+          'Опубликована': 'bg-success'
+        }[status];
+
+        statsRow.innerHTML += `
+          <div class="col-md-2 col-6">
+            <div class="text-center p-3 bg-white rounded shadow-sm">
+              <div class="fs-4 fw-bold text-dark">${count || 0}</div>
+              <div class="small text-muted">${status}</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function loadArticles() {
+      const { data: submissions, error } = await supabase
+        .from('submissions')
+        .select('id, title, authors, status, reviewer_id, file_url, article_id, submitted_at')
+        .eq('status', currentStatus)
+        .order('submitted_at', { ascending: false })
+        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+      if (error) return console.error(error);
+
+      const { data: reviewers } = await supabase.from('profiles').select('id, full_name').eq('role', 'reviewer');
+
+      const list = document.getElementById('adminList');
+      list.innerHTML = submissions.length ? submissions.map(item => `
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">${item.title}</h5>
+              <p class="text-muted"><strong>Авторы:</strong> ${item.authors}</p>
+              <p><strong>Номер:</strong> ${item.article_id || '<em class="text-muted">не опубликована</em>'}</p>
+
+              <div class="row align-items-center mt-3">
+                <div class="col-md-4">
+                  <strong>Статус:</strong>
+                  <select class="form-select mt-1" onchange="updateStatus('${item.id}', this.value)">
+                    ${['Подана','На рецензии','Принята','Отклонена','Опубликована'].map(s => 
+                      `<option ${item.status===s?'selected':''}>${s}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <strong>Рецензент:</strong>
+                  <select class="form-select mt-1" id="reviewer-${item.id}">
+                    <option value="">— Назначить —</option>
+                    ${reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id===r.id?'selected':''}>${r.full_name}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                  <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-secondary">PDF</a>
+                  <button class="btn btn-sm btn-primary ms-2" onclick="assignReviewer('${item.id}')">Назначить</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('') : '<p class="text-center text-muted">Нет статей с этим статусом</p>';
+
+      // Пагинация
+      const { count } = await supabase.from('submissions').select('id', { count: 'exact' }).eq('status', currentStatus);
+      const totalPages = Math.ceil((count || 0) / pageSize);
+      document.getElementById('pageInfo').textContent = `Страница ${currentPage} из ${totalPages || 1}`;
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    }
+
+    document.getElementById('prevBtn').onclick = () => { if (currentPage > 1) { currentPage--; loadArticles(); } };
+    document.getElementById('nextBtn').onclick = () => { currentPage++; loadArticles(); };
 
     checkSession();
   </script>
