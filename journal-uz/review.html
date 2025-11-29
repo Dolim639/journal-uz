@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Рецензирование</title>
+  <title>Рецензирование — Журнал UZ</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
     <div class="container">
-      <a class="navbar-brand" href="index.html">Журнал UZ</a>
+      <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
       <div class="navbar-nav ms-auto">
         <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
       </div>
     </div>
   </nav>
+
   <div class="container mt-5">
-    <h2>Статьи на рецензию</h2>
-    <div id="reviewsList" class="row"></div>
+    <h2 class="fw-bold mb-4">Статьи на рецензию</h2>
+    <div id="reviewsList" class="row g-4"></div>
   </div>
 
   <script type="module">
@@ -41,7 +45,7 @@
         .single();
 
       if (!profile || profile.role !== 'reviewer') {
-        alert('Доступ запрещён! (Требуется роль рецензента)');
+        alert('Доступ запрещён!');
         window.location.href = 'dashboard.html';
         return;
       }
@@ -55,147 +59,83 @@
     }
 
     async function loadReviews() {
-      const { data: submissions, error } = await supabase
+      const { data: submissions } = await supabase
         .from('submissions')
-        .select('*')
+        .select('id, title, authors, abstract, status, reviewer_id, file_url, article_id')  // Добавили article_id
         .eq('status', 'На рецензии')
         .order('submitted_at', { ascending: false });
 
-      if (error) {
-        console.error(error);
-        document.getElementById('reviewsList').innerHTML = '<p class="col-12">Ошибка загрузки: ' + error.message + '</p>';
-        return;
-      }
-
       const list = document.getElementById('reviewsList');
-      list.innerHTML = '';
+      list.innerHTML = submissions.map(item => `
+        <div class="col-12 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title fw-bold">${item.title}</h5>
+              <p class="text-muted mb-2"><strong>Авторы:</strong> ${item.authors}</p>
+              <p class="card-text text-muted">${item.abstract.substring(0, 200)}...</p>
 
-      if (submissions.length === 0) {
-        list.innerHTML = '<p class="col-12">Нет статей на рецензию.</p>';
-        return;
-      }
+              <div class="mb-3">
+                <strong>Статус:</strong> ${item.status}
+                <strong class="ms-3">Номер:</strong> ${item.article_id || 'Не присвоен'}
+              </div>
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const reviewerId = session.user.id;
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <small class="text-muted">
+                  <i class="fas fa-calendar me-1"></i> ${new Date(item.submitted_at).toLocaleDateString('ru')}
+                </small>
+                <a href="article.html?id=${item.id}" class="btn btn-outline-primary btn-sm">Просмотреть</a>
+              </div>
 
-      for (const item of submissions) {
-        // Fetch своего отзыва (оптимизация: только для этого рецензента)
-        const { data: myReview } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('submission_id', item.id)
-          .eq('reviewer_id', reviewerId)
-          .single();  // single — если есть, вернёт один
-
-        const isReviewed = !!myReview;  // Есть отзыв?
-        const buttonText = isReviewed ? 'Обновить отзыв' : 'Отправить отзыв';
-        const textareaValue = myReview ? myReview.review : '';
-        const selectValue = myReview ? myReview.score.toString() : '';
-
-        const card = `
-          <div class="col-md-12 mb-3">
-            <div class="card">
-              <div class="card-body">
-                <h5>${item.title}</h5>
-                <p class="mb-2">Авторы: ${item.authors}</p>
-                <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-info mb-2">Открыть PDF</a>
-                
-                <form class="mt-2">
-                  <label class="form-label">Ваш отзыв:</label>
-                  <textarea class="form-control" id="review-${item.id}" placeholder="Ваш отзыв" rows="4">${textareaValue}</textarea>
-                  
-                  <label class="form-label mt-2">Балл (1-5):</label>
-                  <select class="form-select" id="score-${item.id}">
-                    <option value="">Выберите балл</option>
-                    <option value="1" ${selectValue === '1' ? 'selected' : ''}>1</option>
-                    <option value="2" ${selectValue === '2' ? 'selected' : ''}>2</option>
-                    <option value="3" ${selectValue === '3' ? 'selected' : ''}>3</option>
-                    <option value="4" ${selectValue === '4' ? 'selected' : ''}>4</option>
-                    <option value="5" ${selectValue === '5' ? 'selected' : ''}>5</option>
-                  </select>
-                  
-                  <button type="button" class="btn btn-success mt-2" onclick="submitReview('${item.id}', ${isReviewed ? `'${myReview.id}'` : 'null'})">${buttonText}</button>
-                  ${isReviewed ? `<small class="text-muted d-block mt-1">Отзыв уже оставлен. Вы можете отредактировать.</small>` : ''}
-                </form>
+              <div class="mt-3">
+                <label class="form-label">Ваш отзыв:</label>
+                <textarea class="form-control" id="review-${item.id}" rows="4"></textarea>
+                <label class="form-label mt-3">Балл (1-5):</label>
+                <select class="form-select" id="score-${item.id}">
+                  <option>1</option>
+                  <option>2</option>
+                  <option>3</option>
+                  <option>4</option>
+                  <option>5</option>
+                </select>
+                <button class="btn btn-primary mt-3" onclick="submitReview('${item.id}')">Отправить отзыв</button>
               </div>
             </div>
           </div>
-        `;
-        list.innerHTML += card;
-      }
+        </div>
+      `).join('');
+
+      if (submissions.length === 0) list.innerHTML = '<p class="text-center">Нет статей на рецензию</p>';
     }
 
-    // Функция отправки/обновления отзыва
-    window.submitReview = async (submissionId, existingReviewId = null) => {
-      const reviewText = document.getElementById(`review-${submissionId}`).value.trim();
-      const score = document.getElementById(`score-${submissionId}`).value;
+    async function submitReview(id) {
+      const reviewText = document.getElementById(`review-${id}`).value.trim();
+      const score = parseInt(document.getElementById(`score-${id}`).value);
 
-      if (!reviewText || !score) {
-        alert('Заполните отзыв и балл!');
-        return;
-      }
+      if (!reviewText || isNaN(score)) return alert('Заполните отзыв и балл!');
 
       const { data: { session } } = await supabase.auth.getSession();
       const reviewerId = session.user.id;
-      const scoreInt = parseInt(score);
 
-      try {
-        let error;
-        if (existingReviewId) {
-          // Обновление существующего
-          const { error: updateError } = await supabase
-            .from('reviews')
-            .update({
-              review: reviewText,
-              score: scoreInt,
-              created_at: new Date().toISOString()  // Обновляем дату
-            })
-            .eq('id', existingReviewId);
+      // Сохранение отзыва
+      await supabase.from('reviews').insert({
+        submission_id: id,
+        reviewer_id: reviewerId,
+        review: reviewText,
+        score: score
+      });
 
-          error = updateError;
-        } else {
-          // Новый отзыв
-          const { error: insertError } = await supabase
-            .from('reviews')
-            .insert([{
-              submission_id: submissionId,
-              reviewer_id: reviewerId,
-              review: reviewText,
-              score: scoreInt,
-              created_at: new Date().toISOString()
-            }]);
+      // Новый критерий статуса
+      let newStatus = 'На рецензии';
+      if (score <= 3) newStatus = 'Отклонена';
+      if (score >= 4) newStatus = 'Принята';
 
-          error = insertError;
-        }
+      await supabase.from('submissions').update({ status: newStatus }).eq('id', id);
 
-        if (error) {
-          alert('Ошибка: ' + error.message);
-          return;
-        }
-
-        // Авто-обновление статуса (если score >=4 — 'Принята')
-        let newStatus = 'На рецензии';
-        if (scoreInt >= 4) {
-          newStatus = 'Принята';
-          const { error: statusError } = await supabase
-            .from('submissions')
-            .update({ status: newStatus })
-            .eq('id', submissionId);
-
-          if (statusError) console.error('Ошибка обновления статуса:', statusError);
-        }
-
-        alert(`Отзыв ${existingReviewId ? 'обновлён' : 'отправлен'}! Статус статьи: ${newStatus}`);
-        loadReviews();  // Перезагрузка списка
-
-      } catch (err) {
-        console.error(err);
-        alert('Ошибка: ' + err.message);
-      }
-    };
+      alert(`Отзыв отправлен! Статус статьи: ${newStatus}`);
+      loadReviews();
+    }
 
     checkSession();
   </script>
 </body>
 </html>
-
