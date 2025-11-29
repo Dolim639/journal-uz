@@ -6,63 +6,90 @@
   <title>Админ-панель — Журнал UZ</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
   <style>
-    .status-badge {
-      font-size: 0.8rem;
-      padding: 0.35em 0.8em;
-    }
-    .card-hover:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
-      transition: all 0.3s ease;
-    }
     .admin-header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white !important;
-      border-radius: 15px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      color: white;
+      border-radius: 1rem;
+      padding: 2.5rem 2rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
+    }
+    .tab-btn {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 50px;
+      margin: 0 0.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .tab-btn:hover, .tab-btn.active {
+      background: white;
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    .article-card {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      border: none;
+      overflow: hidden;
+    }
+    .article-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+    }
+    .status-badge {
+      font-size: 0.85rem;
+      padding: 0.4em 1em;
+      border-radius: 2px solid;
+      font-weight: 600;
     }
   </style>
 </head>
 <body class="bg-light">
 
-  <!-- Красивый хедер -->
+  <!-- Тот же хедер, что и на главной -->
+  <section class="py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <h1 class="fw-bold mb-0" style="color: #ffffff !important; text-shadow: 0 3px 10px rgba(0,0,0,0.4);">ЖурналUZ</h1>
+        <a href="index.html" class="btn btn-outline-light">На главную</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Красивый админский заголовок -->
   <div class="container my-5">
-    <div class="admin-header text-center text-white">
-      <h1 class="display-5 fw-bold mb-3">
-        <i class="fas fa-crown me-3"></i>Админ-панель
-      </h1>
-      <p class="lead mb-0">Журнал UZ — управление статьями и публикациями</p>
+    <div class="admin-header text-center">
+      <h1 class="display-5 fw-bold mb-2">Админ-панель</h1>
+      <p class="lead opacity-90">Управление статьями • Рецензирование • Публикация</p>
     </div>
-  </div>
 
-  <div class="container mb-5">
-
-    <!-- Вкладки по статусам (красивые кнопки) -->
+    <!-- Фиолетовые вкладки -->
     <div class="text-center mb-5">
-      <div class="btn-group btn-group-lg shadow-sm" role="group">
-        <button type="button" class="btn btn-outline-primary active px-4" data-status="Подана">Поданные</button>
-        <button type="button" class="btn btn-outline-warning px-4" data-status="На рецензии">На рецензии</button>
-        <button type="button" class="btn btn-outline-info px-4" data-status="Принята">Принятые</button>
-        <button type="button" class="btn btn-outline-danger px-4" data-status="Отклонена">Отклонённые</button>
-        <button type="button" class="btn btn-outline-success px-4" data-status="Опубликована">Опубликованные</button>
+      <div class="d-inline-flex flex-wrap justify-content-center gap-3 p-3 bg-white rounded-4 shadow-sm">
+        <button class="tab-btn active" data-status="Подана">Поданные</button>
+        <button class="tab-btn" data-status="На рецензии">На рецензии</button>
+        <button class="tab-btn" data-status="Принята">Принятые</button>
+        <button class="tab-btn" data-status="Отклонена">Отклонённые</button>
+        <button class="tab-btn" data-status="Опубликована">Опубликованные</button>
       </div>
     </div>
 
-    <div class="text-center mb-5">
-      <div class="btn-group btn-group-lg shadow-sm" role="group">
-        <button type="button" class="btn btn-outline-primary active px-4" data-status="Подана">Поданные</button>
-        <button type="button" class="btn btn-outline-warning px-4" data-status="На рецензии">На рецензии</button>
-        <button type="button" class="btn btn-outline-info px-4" data-status="Принята">Принятые</button>
-        <button type="button" class="btn btn-outline-danger px-4" data-status="Отклонена">Отклонённые</button>
-        <button type="button" class="btn btn-outline-success px-4" data-status="Опубликована">Опубликованные</button>
-      </div>
-    </div>
+    <!-- Список статей -->
+    <div id="adminList" class="row g-4"></div>
 
-    <!-- Статьи -->
-    <div id="adminList"></div>
+    <!-- Если пусто -->
+    <div id="emptyState" class="text-center py-5 d-none">
+      <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+      <h4 class="text-muted">Нет статей с этим статусом</h4>
+    </div>
   </div>
 
   <script type="module">
@@ -70,9 +97,9 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-
     let currentStatus = 'Подана';
 
+    // Автопубликация при смене на "Опубликована"
     window.updateStatus = async (id, newStatus) => {
       if (newStatus === 'Опубликована') {
         const year = new Date().getFullYear();
@@ -96,10 +123,10 @@
           })
           .eq('id', id);
 
-        if (error) return alert('Ошибка: ' + error.message);
-        alert(`Статья опубликована! Номер: ${year}-${String(nextNumber).padStart(3, '0')}`);
+        if (error) return alert('Ошибка публикации: ' + error.message);
+        alert(`Статья опубликована!\nНомер: ${year}-${String(nextNumber).padStart(3, '0')}`);
       } else {
-        const { error } = await supabase.from('submissions').update({ status: newStatus }).eq('id', id);
+        await supabase.from('submissions').update({ status: newStatus }).eq('id', id);
       }
       loadArticles();
     };
@@ -123,73 +150,84 @@
 
       const { data: reviewers } = await supabase.from('profiles').select('id, full_name').eq('role', 'reviewer');
 
-      const colors = {
-        'Подана': 'bg-info',
+      const badgeClass = {
+        'Подана': 'bg-info text-white',
         'На рецензии': 'bg-warning text-dark',
-        'Принята': 'bg-primary',
-        'Отклонена': 'bg-danger',
-        'Опубликована': 'bg-success'
+        'Принята': 'bg-primary text-white',
+        'Отклонена': 'bg-danger text-white',
+        'Опубликована': 'bg-success text-white'
       };
 
-      document.getElementById('adminList').innerHTML = submissions.map(item => `
-        <div class="card mb-4 card-hover border-0 shadow">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <h5 class="card-title mb-0">${item.title}</h5>
-              <span class="badge ${colors[item.status]} status-badge">${item.status}</span>
-            </div>
+      const list = document.getElementById('adminList');
+      if (!submissions || submissions.length === 0) {
+        list.innerHTML = '';
+        document.getElementById('emptyState').classList.remove('d-none');
+        return;
+      }
 
-            <p class="text-muted mb-2"><strong>Авторы:</strong> ${item.authors}</p>
+      document.getElementById('emptyState').classList.add('d-none');
 
-            ${item.article_id ? `<p class="mb-2"><strong>Номер статьи:</strong> <span class="badge bg-dark">${item.article_id}</span></p>` : ''}
-
-            <p class="text-muted small mb-3">
-              <i class="fas fa-clock me-1"></i> ${new Date(item.submitted_at).toLocaleString('ru')}
-            </p>
-
-            <div class="row g-3">
-              <div class="col-md-5">
-                <label class="form-label fw-bold">Статус</label>
-                <select class="form-select" onchange="updateStatus('${item.id}', this.value)">
-                  ${['Подана','На рецензии','Принята','Отклонена','Опубликована'].map(s => 
-                    `<option value="${s}" ${item.status===s?'selected':''}>${s}</option>`
-                  ).join('')}
-                </select>
+      list.innerHTML = submissions.map(item => `
+        <div class="col-lg-10 mx-auto">
+          <div class="article-card">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title fw-bold mb-0">${item.title}</h5>
+                <div>
+                  ${item.article_id ? `<span class="badge bg-dark fs-6 me-2">${item.article_id}</span>` : ''}
+                  <span class="badge ${badgeClass[item.status]} status-badge">${item.status}</span>
+                </div>
               </div>
 
-              <div class="col-md-4">
-                <label class="form-label fw-bold">Рецензент</label>
-                <select class="form-select" id="reviewer-${item.id}">
-                  <option value="">— не назначен —</option>
-                  ${reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id===r.id?'selected':''}>${r.full_name}</option>`).join('')}
-                </select>
+              <p class="text-muted mb-3"><strong>Авторы:</strong> ${item.authors}</p>
+
+              <div class="text-muted small mb-4">
+                <i class="fas fa-calendar-alt me-2"></i>
+                ${new Date(item.submitted_at).toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
 
-              <div class="col-md-3 d-flex align-items-end gap-2">
-                <a href="${item.file_url}" target="_blank" class="btn btn-outline-secondary">
-                  <i class="fas fa-file-pdf"></i> PDF
-                </a>
-                <button class="btn btn-primary" onclick="assignReviewer('${item.id}')">
-                  Назначить
-                </button>
+              <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                  <select class="form-select form-select-lg" onchange="updateStatus('${item.id}', this.value)">
+                    ${['Подана','На рецензии','Принята','Отклонена','Опубликована'].map(s => 
+                      `<option value="${s}" ${item.status===s?'selected':''}>${s}</option>`
+                    ).join('')}
+                  </select>
+                </div>
+
+                <div class="col-md-4">
+                  <select class="form-select form-select-lg" id="reviewer-${item.id}">
+                    <option value="">— Назначить рецензента —</option>
+                    ${reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id===r.id?'selected':''}>${r.full_name}</option>`).join('')}
+                  </select>
+                </div>
+
+                <div class="col-md-4 text-md-end">
+                  <a href="${item.file_url}" target="_blank" class="btn btn-outline-danger me-2">
+                    <i class="fas fa-file-pdf"></i> PDF
+                  </a>
+                  <button class="btn btn-primary" onclick="assignReviewer('${item.id}')">
+                    Назначить
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      `).join('') || `<div class="text-center py-5 text-muted"><h4>Нет статей с этим статусом</h4></div>`;
+      `).join('');
     }
 
-    // Вкладки
-    document.querySelectorAll('[data-status]').forEach(btn => {
+    // Переключение вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelector('.btn-group .active')?.classList.remove('active');
+        document.querySelector('.tab-btn.active')?.classList.remove('active');
         btn.classList.add('active');
         currentStatus = btn.dataset.status;
         loadArticles();
       });
     });
 
-    // Автозагрузка
+    // Проверка авторизации
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) location.href = 'login.html';
 
@@ -199,9 +237,7 @@
       location.href = 'index.html';
     }
 
-    document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
-
-    loadArticles();
+    loadArticles(); // старт
   </script>
 </body>
 </html>
