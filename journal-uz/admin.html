@@ -6,41 +6,63 @@
   <title>Админ-панель — Журнал UZ</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    .status-badge {
+      font-size: 0.8rem;
+      padding: 0.35em 0.8em;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+      transition: all 0.3s ease;
+    }
+    .admin-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white !important;
+      border-radius: 15px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+  </style>
 </head>
 <body class="bg-light">
 
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
-    <div class="container">
-      <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
-      <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
+  <!-- Красивый хедер -->
+  <div class="container my-5">
+    <div class="admin-header text-center text-white">
+      <h1 class="display-5 fw-bold mb-3">
+        <i class="fas fa-crown me-3"></i>Админ-панель
+      </h1>
+      <p class="lead mb-0">Журнал UZ — управление статьями и публикациями</p>
     </div>
-  </nav>
+  </div>
 
-  <div class="container mt-5">
-    <h2 class="fw-bold mb-4 text-primary">Админ-панель</h2>
+  <div class="container mb-5">
 
-    <!-- Вкладки по статусам -->
-    <div class="btn-group mb-4" role="group">
-      <button type="button" class="btn btn-outline-primary active" data-status="Подана">Поданные</button>
-      <button type="button" class="btn btn-outline-primary" data-status="На рецензии">На рецензии</button>
-      <button type="button" class="btn btn-outline-primary" data-status="Принята">Принятые</button>
-      <button type="button" class="btn btn-outline-primary" data-status="Отклонена">Отклонённые</button>
-      <button type="button" class="btn btn-outline-primary" data-status="Опубликована">Опубликованные</button>
+    <!-- Вкладки по статусам (красивые кнопки) -->
+    <div class="text-center mb-5">
+      <div class="btn-group btn-group-lg shadow-sm" role="group">
+        <button type="button" class="btn btn-outline-primary active px-4" data-status="Подана">Поданные</button>
+        <button type="button" class="btn btn-outline-warning px-4" data-status="На рецензии">На рецензии</button>
+        <button type="button" class="btn btn-outline-info px-4" data-status="Принята">Принятые</button>
+        <button type="button" class="btn btn-outline-danger px-4" data-status="Отклонена">Отклонённые</button>
+        <button type="button" class="btn btn-outline-success px-4" data-status="Опубликована">Опубликованные</button>
+      </div>
     </div>
 
-    <!-- Статистика -->
-    <div class="row mb-4 g-3" id="stats"></div>
-
-    <!-- Список статей -->
-    <div id="adminList" class="row g-4"></div>
-
-    <!-- Пагинация -->
-    <div class="d-flex justify-content-center mt-4" id="pagination">
-      <button class="btn btn-secondary me-2" id="prevBtn" disabled>Назад</button>
-      <span class="align-self-center mx-3" id="pageInfo">Страница 1</span>
-      <button class="btn btn-secondary" id="nextBtn">Вперёд</button>
+    <div class="text-center mb-5">
+      <div class="btn-group btn-group-lg shadow-sm" role="group">
+        <button type="button" class="btn btn-outline-primary active px-4" data-status="Подана">Поданные</button>
+        <button type="button" class="btn btn-outline-warning px-4" data-status="На рецензии">На рецензии</button>
+        <button type="button" class="btn btn-outline-info px-4" data-status="Принята">Принятые</button>
+        <button type="button" class="btn btn-outline-danger px-4" data-status="Отклонена">Отклонённые</button>
+        <button type="button" class="btn btn-outline-success px-4" data-status="Опубликована">Опубликованные</button>
+      </div>
     </div>
+
+    <!-- Статьи -->
+    <div id="adminList"></div>
   </div>
 
   <script type="module">
@@ -49,11 +71,8 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    let currentStatus = 'Подана';  // по умолчанию
-    let currentPage = 1;
-    const pageSize = 10;
+    let currentStatus = 'Подана';
 
-    // Глобальные функции
     window.updateStatus = async (id, newStatus) => {
       if (newStatus === 'Опубликована') {
         const year = new Date().getFullYear();
@@ -77,141 +96,112 @@
           })
           .eq('id', id);
 
-        if (error) return alert('Ошибка публикации: ' + error.message);
+        if (error) return alert('Ошибка: ' + error.message);
         alert(`Статья опубликована! Номер: ${year}-${String(nextNumber).padStart(3, '0')}`);
       } else {
         const { error } = await supabase.from('submissions').update({ status: newStatus }).eq('id', id);
-        if (error) return alert('Ошибка: ' + error.message);
       }
-      loadStats();
       loadArticles();
     };
 
     window.assignReviewer = async (id) => {
       const select = document.getElementById(`reviewer-${id}`);
-      const reviewerId = select?.value;
+      const reviewerId = select.value;
       if (!reviewerId) return alert('Выберите рецензента!');
 
-      const { error } = await supabase.from('submissions').update({ reviewer_id: reviewerId }).eq('id', id);
-      if (error) alert('Ошибка: ' + error.message);
-      else alert('Рецензент назначен');
+      await supabase.from('submissions').update({ reviewer_id: reviewerId }).eq('id', id);
+      alert('Рецензент назначен');
       loadArticles();
     };
 
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return location.href = 'login.html';
-
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (!profile || profile.role !== 'admin') {
-        alert('Доступ запрещён!');
-        return location.href = 'index.html';
-      }
-
-      document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
-
-      setupTabs();
-      loadStats();
-      loadArticles();
-    }
-
-    function setupTabs() {
-      document.querySelectorAll('[data-status]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelector('.btn-group .active')?.classList.remove('active');
-          btn.classList.add('active');
-          currentStatus = btn.dataset.status;
-          currentPage = 1;
-          loadArticles();
-        });
-      });
-    }
-
-    async function loadStats() {
-      const statuses = ['Подана', 'На рецензии', 'Принята', 'Отклонена', 'Опубликована'];
-      const statsRow = document.getElementById('stats');
-      statsRow.innerHTML = '';
-
-      for (const status of statuses) {
-        const { count } = await supabase.from('submissions').select('id', { count: 'exact' }).eq('status', status);
-        const badgeClass = {
-          'Подана': 'bg-info',
-          'На рецензии': 'bg-warning',
-          'Принята': 'bg-primary',
-          'Отклонена': 'bg-danger',
-          'Опубликована': 'bg-success'
-        }[status];
-
-        statsRow.innerHTML += `
-          <div class="col-md-2 col-6">
-            <div class="text-center p-3 bg-white rounded shadow-sm">
-              <div class="fs-4 fw-bold text-dark">${count || 0}</div>
-              <div class="small text-muted">${status}</div>
-            </div>
-          </div>
-        `;
-      }
-    }
-
     async function loadArticles() {
-      const { data: submissions, error } = await supabase
+      const { data: submissions } = await supabase
         .from('submissions')
         .select('id, title, authors, status, reviewer_id, file_url, article_id, submitted_at')
         .eq('status', currentStatus)
-        .order('submitted_at', { ascending: false })
-        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
-
-      if (error) return console.error(error);
+        .order('submitted_at', { ascending: false });
 
       const { data: reviewers } = await supabase.from('profiles').select('id, full_name').eq('role', 'reviewer');
 
-      const list = document.getElementById('adminList');
-      list.innerHTML = submissions.length ? submissions.map(item => `
-        <div class="col-12">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title">${item.title}</h5>
-              <p class="text-muted"><strong>Авторы:</strong> ${item.authors}</p>
-              <p><strong>Номер:</strong> ${item.article_id || '<em class="text-muted">не опубликована</em>'}</p>
+      const colors = {
+        'Подана': 'bg-info',
+        'На рецензии': 'bg-warning text-dark',
+        'Принята': 'bg-primary',
+        'Отклонена': 'bg-danger',
+        'Опубликована': 'bg-success'
+      };
 
-              <div class="row align-items-center mt-3">
-                <div class="col-md-4">
-                  <strong>Статус:</strong>
-                  <select class="form-select mt-1" onchange="updateStatus('${item.id}', this.value)">
-                    ${['Подана','На рецензии','Принята','Отклонена','Опубликована'].map(s => 
-                      `<option ${item.status===s?'selected':''}>${s}</option>`
-                    ).join('')}
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <strong>Рецензент:</strong>
-                  <select class="form-select mt-1" id="reviewer-${item.id}">
-                    <option value="">— Назначить —</option>
-                    ${reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id===r.id?'selected':''}>${r.full_name}</option>`).join('')}
-                  </select>
-                </div>
-                <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                  <a href="${item.file_url}" target="_blank" class="btn btn-sm btn-secondary">PDF</a>
-                  <button class="btn btn-sm btn-primary ms-2" onclick="assignReviewer('${item.id}')">Назначить</button>
-                </div>
+      document.getElementById('adminList').innerHTML = submissions.map(item => `
+        <div class="card mb-4 card-hover border-0 shadow">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <h5 class="card-title mb-0">${item.title}</h5>
+              <span class="badge ${colors[item.status]} status-badge">${item.status}</span>
+            </div>
+
+            <p class="text-muted mb-2"><strong>Авторы:</strong> ${item.authors}</p>
+
+            ${item.article_id ? `<p class="mb-2"><strong>Номер статьи:</strong> <span class="badge bg-dark">${item.article_id}</span></p>` : ''}
+
+            <p class="text-muted small mb-3">
+              <i class="fas fa-clock me-1"></i> ${new Date(item.submitted_at).toLocaleString('ru')}
+            </p>
+
+            <div class="row g-3">
+              <div class="col-md-5">
+                <label class="form-label fw-bold">Статус</label>
+                <select class="form-select" onchange="updateStatus('${item.id}', this.value)">
+                  ${['Подана','На рецензии','Принята','Отклонена','Опубликована'].map(s => 
+                    `<option value="${s}" ${item.status===s?'selected':''}>${s}</option>`
+                  ).join('')}
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Рецензент</label>
+                <select class="form-select" id="reviewer-${item.id}">
+                  <option value="">— не назначен —</option>
+                  ${reviewers.map(r => `<option value="${r.id}" ${item.reviewer_id===r.id?'selected':''}>${r.full_name}</option>`).join('')}
+                </select>
+              </div>
+
+              <div class="col-md-3 d-flex align-items-end gap-2">
+                <a href="${item.file_url}" target="_blank" class="btn btn-outline-secondary">
+                  <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                <button class="btn btn-primary" onclick="assignReviewer('${item.id}')">
+                  Назначить
+                </button>
               </div>
             </div>
           </div>
         </div>
-      `).join('') : '<p class="text-center text-muted">Нет статей с этим статусом</p>';
-
-      // Пагинация
-      const { count } = await supabase.from('submissions').select('id', { count: 'exact' }).eq('status', currentStatus);
-      const totalPages = Math.ceil((count || 0) / pageSize);
-      document.getElementById('pageInfo').textContent = `Страница ${currentPage} из ${totalPages || 1}`;
-      document.getElementById('prevBtn').disabled = currentPage === 1;
-      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+      `).join('') || `<div class="text-center py-5 text-muted"><h4>Нет статей с этим статусом</h4></div>`;
     }
 
-    document.getElementById('prevBtn').onclick = () => { if (currentPage > 1) { currentPage--; loadArticles(); } };
-    document.getElementById('nextBtn').onclick = () => { currentPage++; loadArticles(); };
+    // Вкладки
+    document.querySelectorAll('[data-status]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelector('.btn-group .active')?.classList.remove('active');
+        btn.classList.add('active');
+        currentStatus = btn.dataset.status;
+        loadArticles();
+      });
+    });
 
-    checkSession();
+    // Автозагрузка
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) location.href = 'login.html';
+
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+    if (!profile || profile.role !== 'admin') {
+      alert('Доступ запрещён!');
+      location.href = 'index.html';
+    }
+
+    document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
+
+    loadArticles();
   </script>
 </body>
 </html>
