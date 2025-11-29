@@ -29,6 +29,7 @@
         <div class="card shadow-lg border-0">
           <div class="card-body p-5">
             <h1 id="articleTitle" class="display-5 fw-bold mb-4"></h1>
+            <p class="text-muted mb-3"><strong>Номер:</strong> <span id="articleId"></span></p>
             <p id="articleAuthors" class="text-muted fs-5 mb-4"></p>
             <div id="articleAbstract" class="lead text-muted mb-5 p-4 bg-light rounded"></div>
 
@@ -81,7 +82,7 @@
     async function loadArticle() {
       const { data: article, error } = await supabase
         .from('submissions')
-        .select('id, title, authors, abstract, file_url, views, submitted_at')
+        .select('id, title, authors, abstract, file_url, views, submitted_at, article_id')  // Добавили article_id
         .eq('id', articleId)
         .eq('status', 'Опубликована')
         .single();
@@ -93,7 +94,7 @@
         return;
       }
 
-      // Увеличиваем счётчик просмотров
+      // Увеличиваем просмотры
       await supabase
         .from('submissions')
         .update({ views: (article.views || 0) + 1 })
@@ -102,6 +103,7 @@
       // Заполняем данные
       document.title = article.title + ' — Журнал UZ';
       document.getElementById('articleTitle').textContent = article.title;
+      document.getElementById('articleId').textContent = article.article_id || 'Не опубликована';
       document.getElementById('articleAuthors').textContent = 'Авторы: ' + article.authors;
       document.getElementById('articleAbstract').textContent = article.abstract;
       document.getElementById('articleDate').textContent = new Date(article.submitted_at).toLocaleDateString('ru');
@@ -117,7 +119,7 @@
       }).join('');
       document.getElementById('articleTags').innerHTML = tagsHtml || '<span class="text-muted">Теги не указаны</span>';
 
-      // Показываем статью
+      // Показываем контент
       document.getElementById('loading').classList.add('d-none');
       document.getElementById('articleContent').classList.remove('d-none');
     }
