@@ -18,7 +18,8 @@
   </nav>
 
   <div class="container mt-5">
-    <h2 class="fw-bold mb-4">Статьи на рецензию</h2>
+    <!-- Заголовок теперь белый -->
+    <h2 class="fw-bold mb-4 text-white" style="text-shadow: 0 3px 10px rgba(0,0,0,0.4);">Статьи на рецензию</h2>
     <div id="reviewsList" class="row g-4"></div>
   </div>
 
@@ -28,7 +29,6 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // ГЛОБАЛЬНАЯ ФУНКЦИЯ — теперь работает!
     window.submitReview = async (submissionId) => {
       const reviewText = document.getElementById(`review-${submissionId}`).value.trim();
       const score = parseInt(document.getElementById(`score-${submissionId}`).value);
@@ -40,7 +40,6 @@
       const { data: { session } } = await supabase.auth.getSession();
       const reviewerId = session.user.id;
 
-      // 1. Сохраняем отзыв
       const { error: reviewError } = await supabase.from('reviews').insert({
         submission_id: submissionId,
         reviewer_id: reviewerId,
@@ -51,7 +50,6 @@
 
       if (reviewError) return alert('Ошибка отзыва: ' + reviewError.message);
 
-      // 2. Автоматическая публикация при 4–5
       if (score >= 4) {
         const year = new Date().getFullYear();
 
@@ -81,12 +79,11 @@
           alert(`Отлично! Статья опубликована автоматически!\nНомер: ${year}-${String(nextNumber).padStart(3, '0')}`);
         }
       } else {
-        // 1–3 → отклонена
         await supabase.from('submissions').update({ status: 'Отклонена' }).eq('id', submissionId);
         alert('Статья отклонена');
       }
 
-      loadReviews(); // обновляем список
+      loadReviews();
     };
 
     async function checkSession() {
@@ -107,7 +104,7 @@
       const { data: submissions } = await supabase
         .from('submissions')
         .select('id, title, authors, abstract, status, file_url, article_id')
-        .in('status', ['На рецензии', 'Принята']) // чтобы видеть и уже принятые
+        .in('status', ['На рецензии', 'Принята'])
         .order('submitted_at', { ascending: false });
 
       const list = document.getElementById('reviewsList');
