@@ -30,21 +30,25 @@
             <div class="invalid-feedback">Введите корректный email</div>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3 position-relative">
             <label class="form-label fw-semibold">Пароль</label>
             <input type="password" class="form-control form-control-lg" id="password" required minlength="6">
-            <div class="invalid-feedback">Пароль должен быть не менее 6 символов</div>
+            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3 text-muted" id="togglePassword">
+              <i class="fas fa-eye"></i>
+            </button>
+            <div class="invalid-feedback">Минимум 6 символов</div>
           </div>
 
-          <div class="mb-3" id="confirmPasswordGroup" style="display: none;">
+          <div class="mb-3 position-relative" id="confirmPasswordGroup" style="display: none;">
             <label class="form-label fw-semibold">Повторите пароль</label>
             <input type="password" class="form-control form-control-lg" id="confirmPassword">
+            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3 text-muted" id="toggleConfirm">
+              <i class="fas fa-eye"></i>
+            </button>
             <div class="invalid-feedback" id="passwordMismatch">Пароли не совпадают</div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
-            Войти
-          </button>
+          <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">Войти</button>
         </form>
 
         <div class="mt-4 text-center">
@@ -53,10 +57,9 @@
           </button>
         </div>
 
-        <!-- Ссылка "Забыли пароль?" — скрыта по умолчанию -->
         <div class="mt-3 text-center d-none" id="forgotPasswordSection">
           <a href="#" id="forgotPassword" class="text-muted small d-block">
-            Забыли пароль? Сбросьте здесь
+            Забыли пароль? Сбросить
           </a>
         </div>
       </div>
@@ -80,114 +83,103 @@
 
     let isLogin = true;
 
+    // Показать/скрыть пароль
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye');
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash');
+    });
+
+    document.getElementById('toggleConfirm').addEventListener('click', () => {
+      const type = confirmInput.type === 'password' ? 'text' : 'password';
+      confirmInput.type = type;
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye');
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash');
+    });
+
     function updateFormMode() {
       if (isLogin) {
         formTitle.textContent = 'Вход в систему';
         submitBtn.textContent = 'Войти';
         toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
         confirmGroup.style.display = 'none';
-        confirmInput.removeAttribute('required');
       } else {
         formTitle.textContent = 'Создание аккаунта';
         submitBtn.textContent = 'Зарегистрироваться';
         toggleBtn.innerHTML = 'Уже есть аккаунт? <strong>Войти</strong>';
         confirmGroup.style.display = 'block';
-        confirmInput.setAttribute('required', '');
       }
+      forgotSection.classList.add('d-none');
     }
-
     updateFormMode();
 
     toggleBtn.addEventListener('click', () => {
       isLogin = !isLogin;
       updateFormMode();
       authForm.reset();
-      authForm.classList.remove('was-validated');
-      document.getElementById('passwordMismatch').style.display = 'none';
-      forgotSection.classList.add('d-none');
     });
 
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const email = document.getElementById('email').value.trim();
       const password = passwordInput.value;
 
       if (!isLogin && password !== confirmInput.value) {
-        confirmInput.setCustomValidity('Пароли не совпадают');
-        authForm.classList.add('was-validated');
-        document.getElementById('passwordMismatch').style.display = 'block';
+        alert('Пароли не совпадают!');
         return;
-      } else {
-        confirmInput.setCustomValidity('');
       }
 
       try {
         let result;
-
         if (isLogin) {
           result = await supabase.auth.signInWithPassword({ email, password });
         } else {
           result = await supabase.auth.signUp({ email, password });
-          if (result.data.user) alert('Регистрация успешна! Проверьте почту для подтверждения.');
+          alert('Регистрация успешна! Подтвердите email — письмо уже в почте.');
+          // НЕ ПЕРЕКИДЫВАЕМ НИКУДА! Ждём подтверждения
+          return;
         }
 
         if (result.error) throw result.error;
 
-        const user = result.data.user || result.data.session?.user;
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, role')
-            .eq('id', user.id)
-            .single();
+        // Только после входа — проверяем профиль
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, role')
+          .eq('id', result.data.user.id)
+          .single();
 
-          if (!profile || !profile.full_name) {
-            location.href = 'profile.html';
-          } else {
-            if (profile.role === 'admin') location.href = 'admin.html';
-            else if (profile.role === 'reviewer') location.href = 'review.html';
-            else if (profile.role === 'reader') location.href = 'index.html';
-            else location.href = 'dashboard.html';
-          }
+        if (!profile?.full_name) {
+          location.href = 'profile.html';
+        } else {
+          location.href = 'index.html'; // Все с заполненным именем — на главную
         }
-      } catch (error) {
-        let msg = 'Ошибка: ' + error.message;
-        if (isLogin && error.message.includes('Invalid login credentials')) {
-          msg = 'Неверный email или пароль.';
-          forgotSection.classList.remove('d-none');  // Показываем "Забыли пароль?" после ошибки входа
-        } else if (!isLogin && error.message.includes('User already registered')) {
-          msg = 'Этот email уже зарегистрирован.';
+      } catch (err) {
+        if (isLogin && err.message.includes('Invalid login credentials')) {
+          alert('Неверный email или пароль');
+          forgotSection.classList.remove('d-none');
+        } else {
+          alert('Ошибка: ' + err.message);
         }
-        alert(msg);
       }
     });
 
-    // Сброс пароля
     document.getElementById('forgotPassword').addEventListener('click', async (e) => {
       e.preventDefault();
-      const email = prompt('Введите ваш email для сброса пароля:');
+      const email = prompt('Введите email для сброса пароля:');
       if (!email) return;
-
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://journal-uz.vercel.app/reset-password.html'
       });
-
-      if (error) alert('Ошибка: ' + error.message);
-      else alert('Проверьте почту! Ссылка для сброса пароля отправлена на ' + email);
-    });
-
-    authForm.addEventListener('input', () => {
-      authForm.classList.add('was-validated');
+      error ? alert('Ошибка: ' + error.message) : alert('Письмо отправлено на ' + email);
     });
   </script>
 
   <style>
-    .invalid-feedback#passwordMismatch { display: none; }
-    .card { box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
-    .btn-primary { background: #667eea; border: none; font-weight: 600; }
-    .btn-primary:hover { background: #5a6fd8; }
-    #forgotPasswordSection { transition: all 0.3s ease; }
+    .btn-primary { background: #667eea !important; border: none; }
+    .btn-primary:hover { background: #5a6fd8 !important; }
+    #togglePassword, #toggleConfirm { z-index: 10; }
   </style>
 </body>
 </html>
