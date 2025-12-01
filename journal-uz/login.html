@@ -135,57 +135,76 @@
       }
 
       try {
-        let result;
+        authForm.onsubmit = async (e) => {
+  e.preventDefault();
 
-        if (isLogin) {
-          result = await supabase.auth.signInWithPassword({ email, password });
-        } else {
-          // РЕГИСТРАЦИЯ — ФИНАЛЬНЫЙ ВАРИАНТ
-          result = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${location.origin}/profile.html`
-            }
-          });
+  const email = document.getElementById('email').value.trim();
+  const password = passwordInput.value;
 
-          if (result.data.user) {
-            alert('Проверьте почту — письмо с подтверждением уже отправлено.');
-         
-            return; // Ждём подтверждения
-          }
+  if (!isLogin && password !== confirmInput.value) {
+    alert('Пароли не совпадают!');
+    return;
+  }
+
+  try {
+    let result;
+
+    if (isLogin) {
+      result = await supabase.auth.signInWithPassword({ email, password });
+    } else {
+      // РЕГИСТРАЦИЯ
+      result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${location.origin}/profile.html`, // ← сюда придёт после подтверждения
         }
+      });
 
-        if (result.error) throw result.error;
-
-        const user = result.data.user || result.data.session?.user;
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, role')
-            .eq('id', user.id)
-            .single();
-
-          if (!profile?.full_name) {
-            location.href = 'profile.html';
-          } else {
-            if (profile.role === 'admin') location.href = 'admin.html';
-            else if (profile.role === 'reviewer') location.href = 'review.html';
-            else if (profile.role === 'reader') location.href = 'index.html';
-            else location.href = 'dashboard.html';
-          }
-        }
-      } catch (err) {
-        if (isLogin && err.message.includes('Invalid login credentials')) {
-          alert('Неверный email или пароль');
-          forgotSection.classList.remove('d-none');
-        } else if (!isLogin && err.message.includes('User already registered')) {
-          alert('Этот email уже зарегистрирован');
-        } else {
-          alert('Ошибка: ' + err.message);
-        }
+      // Если пользователь уже подтверждён (редкий случай) — сразу логиним
+      if (result.data.user && result.data.user.identities?.length === 0) {
+        alert('Этот email уже зарегистрирован');
+        return;
       }
-    };
+
+      alert('На вашу почту отправлено письмо с подтверждением!\nЕсли не пришло — проверьте спам или нажмите "Отправить снова"');
+      return; // ← ВАЖНО: останавливаем выполнение, ждём подтверждения
+    }
+
+    // ======= Только для входа =======
+    if (result.error) throw result.error;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Нет сессии');
+
+    // Проверяем, заполнен ли профиль
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!profile?.full_name) {
+      location.href = 'profile.html';
+    } else {
+      // перенаправление по ролям
+      if (profile.role === 'admin') location.href = 'admin.html';
+      else if (profile.role === 'reviewer') location.href = 'review.html';
+      else if (profile.role === 'reader') location.href = 'index.html';
+      else location.href = 'dashboard.html';
+    }
+  } catch (err) {
+    // обработка ошибок (осталось как у тебя)
+    if (isLogin && err.message.includes('Invalid login credentials')) {
+      alert('Неверный email или пароль');
+      forgotSection.classList.remove('d-none');
+    } else if (!isLogin && err.message.includes('User already registered')) {
+      alert('Этот email уже зарегистрирован');
+    } else {
+      alert('Ошибка: ' + err.message);
+    }
+  }
+};
 
     document.getElementById('forgotPassword').onclick = async (e) => {
       e.preventDefault();
@@ -208,4 +227,5 @@
   </style>
 </body>
 </html>
+
 
