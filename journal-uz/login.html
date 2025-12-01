@@ -51,19 +51,21 @@
     }
 
     .form-control {
-      height: 58px;
-      border: none;
-      border-radius: 20px;
-      background: #f8f9ff;
-      padding: 0 1.5rem;
-      font-size: 1.1rem;
-      transition: all 0.3s ease;
-    }
+  height: 58px;
+  border-radius: 20px;
+  background: #f8f9ff;
 
-    .form-control:focus {
-      background: #eef2ff;
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.20);
-    }
+  border: 1px solid #d1d5db; /* <-- Лёгкая серая рамка */
+  padding: 0 1.5rem;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  background: #eef2ff;
+  border-color: #a5b4fc;        /* чуть ярче, когда фокус */
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.20);
+}
 
     /* Контейнер */
     .input-wrapper {
@@ -275,6 +277,7 @@ if (tc) tc.onclick = () => toggleEye("toggleConfirm", "confirmPassword");
 
 </body>
 </html>
+
 
 
 
