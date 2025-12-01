@@ -83,12 +83,28 @@
       transition: all 0.2s ease;
     }
 
-    .toggle-password:hover {
-      color: var(--primary);
-      border-color: var(--primary);
-      background: #f8f9ff;
-    }
+    .toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
 
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  color: #64748b;
+  font-size: 1.25rem;
+
+  transition: all 0.2s ease;
+}
     .btn-login {
       height: 60px;
       border-radius: 30px;
@@ -108,6 +124,13 @@
       color: #6366f1;
       font-weight: 600;
     }
+    .input-wrapper {
+  position: relative;
+}
+
+.input-wrapper .toggle-password {
+  top: calc(50% + 8px); /* центрируем по вертикали идеально */
+}
   </style>
 </head>
 <body>
@@ -275,3 +298,4 @@
   </script>
 </body>
 </html>
+
