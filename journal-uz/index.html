@@ -8,48 +8,40 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="index-page">
 
-  <!-- Красивая шапка с градиентом -->
-  <header class="py-4 shadow-lg" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+  <!-- Шапка с градиентом -->
+  <header class="py-4 shadow" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
-        <h1 class="display-5 fw-bold mb-0 text-white" style="text-shadow: 0 4px 12px rgba(0,0,0,0.4);">
-          Scienta UZ
-        </h1>
-
-        <div id="authSection" class="text-white fs-5">
+        <h1 class="h3 fw-bold mb-0 text-white">Scienta UZ</h1>
+        <div id="authSection">
           <a href="login.html" class="btn btn-outline-light">Вход</a>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Описание -->
-  <section class="text-center py-5 text-white" style="background: rgba(0,0,0,0.15);">
-    <div class="container">
+  <!-- Белый блок с описанием -->
+  <section class="bg-white py-5 border-bottom">
+    <div class="container text-center">
       <h2 class="fw-bold mb-3">Научный рецензируемый журнал Узбекистана</h2>
-      <p class="lead fs-4 opacity-90">
-        Открытый доступ • Двойное слепое рецензирование • Индексация в международных базах
+      <p class="lead text-muted fs-4">
+        Публикация оригинальных научных статей • Открытый доступ • Двойное слепое рецензирование
       </p>
     </div>
   </section>
 
   <div class="container my-5">
 
-    <!-- Поиск — вернул красивую обводку и тень -->
-    <div class="row justify-content-center mb-5">
-      <div class="col-lg-8">
-        <div class="input-group input-group-lg shadow-lg" style="border-radius: 50px; overflow: hidden;">
+    <!-- Поиск -->
+    <div class="row mb-5">
+      <div class="col-lg-9 mx-auto">
+        <div class="input-group input-group-lg shadow-sm border" style="border-radius: 16px; overflow: hidden;">
           <span class="input-group-text bg-white border-0">
-            <i class="fas fa-search text-primary"></i>
+            <i class="fas fa-search text-muted"></i>
           </span>
-          <input 
-            type="text" 
-            id="searchInput" 
-            class="form-control border-0 shadow-none fs-5" 
-            placeholder="Поиск статей по названию, автору или тегу..."
-            style="border-radius: 0 50px 50px 0;">
+          <input type="text" id="searchInput" class="form-control border-0" placeholder="Поиск по названию, автору или тегу..." style="box-shadow: none;">
         </div>
       </div>
     </div>
@@ -57,18 +49,17 @@
     <div class="row">
       <!-- Теги -->
       <div class="col-lg-3 mb-5">
-        <h5 class="fw-bold text-white mb-4" style="text-shadow: 0 2px 8px rgba(0,0,0,0.3);">Теги</h5>
+        <h5 class="fw-bold mb-3">Теги</h5>
         <div id="tagsCloud" class="d-flex flex-wrap gap-2"></div>
       </div>
 
       <!-- Статьи -->
       <div class="col-lg-9">
-        <h5 class="fw-bold text-white mb-4" style="text-shadow: 0 2px 8px rgba(0,0,0,0.3);">Опубликованные статьи</h5>
+        <h5 class="fw-bold mb-4">Опубликованные статьи</h5>
         <div id="articlesList" class="row g-4"></div>
-
-        <div id="noResults" class="text-center py-5 text-white-50">
-          <i class="fas fa-book-open fa-4x mb-4 opacity-75"></i>
-          <p class="fs-4">Статьи не найдены</p>
+        <div id="noResults" class="text-center text-muted py-5 d-none">
+          <i class="fas fa-book-open fa-3x mb-3"></i>
+          <p class="fs-5">Статьи не найдены</p>
         </div>
       </div>
     </div>
@@ -81,12 +72,12 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     const authSection = document.getElementById('authSection');
 
-    // Проверка авторизации
+    // Авторизация + приветствие
     async function initAuth() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        authSection.innerHTML = `<a href="login.html" class="btn btn-outline-light btn-lg px-4">Вход</a>`;
+        authSection.innerHTML = `<a href="login.html" class="btn btn-outline-primary">Вход</a>`;
         return;
       }
 
@@ -105,40 +96,39 @@
 
       authSection.innerHTML = `
         <div class="d-flex align-items-center gap-3">
-          <span class="fw-medium">Привет, <strong>${name}</strong>!</span>
-          <button id="logoutBtn" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-sign-out-alt"></i> Выйти
+          <span>Привет, <strong>${name}</strong>!</span>
+          <button id="logoutBtn" class="btn btn-sm btn-outline-danger">
+            Выйти
           </button>
         </div>
       `;
 
-      document.getElementById('logoutBtn').onclick = async () => {
-        await supabase.auth.signOut();
-        location.reload();
+      document.getElementById('logoutBtn').onclick = () => {
+        supabase.auth.signOut().then(() => location.reload());
       };
     }
 
     initAuth();
 
-    // Загрузка тегов
+    // Теги — фиолетовые ссылки
     async function loadTags() {
       const { data: tags } = await supabase.from('tags').select('name').order('name');
       const cloud = document.getElementById('tagsCloud');
-      
+
       if (!tags?.length) {
-        cloud.innerHTML = '<small class="text-white-50">Тегов пока нет</small>';
+        cloud.innerHTML = '<small class="text-muted">Тегов пока нет</small>';
         return;
       }
 
       cloud.innerHTML = tags.map(t => `
         <a href="tag.html?tag=${encodeURIComponent(t.name)}" 
-           class="btn btn-outline-light btn-sm px-3 opacity-75 hover-opacity-100">
+           class="badge bg-primary text-white text-decoration-none px-3 py-2">
           ${t.name}
         </a>
-      `).join('');
+      `).join(' ');
     }
 
-    // Загрузка статей (оставил как у тебя было — работает отлично)
+    // Статьи — классические белые карточки
     async function loadArticles(query = '') {
       let q = supabase
         .from('submissions')
@@ -152,7 +142,6 @@
       }
 
       const { data: articles } = await q;
-
       const list = document.getElementById('articlesList');
       const noRes = document.getElementById('noResults');
 
@@ -164,9 +153,9 @@
 
       noRes.classList.add('d-none');
 
+      // Теги для статей
       const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
       const { data: allTags } = await supabase.from('tags').select('id, name');
-
       const tagMap = {};
       links?.forEach(l => {
         if (!tagMap[l.submission_id]) tagMap[l.submission_id] = [];
@@ -174,31 +163,31 @@
       });
 
       list.innerHTML = articles.map(a => {
-        const tagsHtml = (tagMap[a.id] || []).map(tid => {
-          const tag = allTags.find(t => t.id === tid);
-          return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-light text-dark">${tag.name}</a>` : '';
-        }).join(' ');
+        const tagsHtml = (tagMap[a.id] || []).map(id => {
+          const tag = allTags.find(t => t.id === id);
+          return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-primary text-white text-decoration-none me-1">${tag.name}</a>` : '';
+        }).join('');
 
         return `
           <div class="col-12 mb-4">
-            <div class="card border-0 shadow-lg text-white" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border-radius: 20px;">
-              <div class="card-body p-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
                 <h5 class="card-title fw-bold">
-                  <a href="article.html?id=${a.id}" class="text-white text-decoration-none hover-text-primary">
-                    ${a.title}
-                  </a>
+                  <a href="article.html?id=${a.id}" class="text-primary text-decoration-none">${a.title}</a>
                 </h5>
-                <p class="text-white-75 mb-2"><strong>Авторы:</strong> ${a.authors}</p>
-                <p class="small opacity-90">${a.abstract.substring(0, 280)}...</p>
+                <p class="text-muted mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+                <p class="card-text text-muted small">${a.abstract.substring(0, 250)}...</p>
 
-                <div class="mb-3">${tagsHtml || ''}</div>
+                <div class="mb-3">
+                  ${tagsHtml || '<small class="text-muted">Без тегов</small>'}
+                </div>
 
-                <div class="d-flex justify-content-between align-items-center text-white-50 small">
+                <div class="d-flex justify-content-between align-items-center text-muted small">
                   <span>
                     ${new Date(a.submitted_at).toLocaleDateString('ru')}
                     <span class="ms-3"><i class="fas fa-eye"></i> ${a.views || 0}</span>
                   </span>
-                  <a href="article.html?id=${a.id}" class="btn btn-outline-light btn-sm">Читать полностью</a>
+                  <a href="article.html?id=${a.id}" class="btn btn-outline-primary btn-sm">Читать полностью</a>
                 </div>
               </div>
             </div>
@@ -207,8 +196,12 @@
       }).join('');
     }
 
-    document.getElementById('searchInput').addEventListener('input', e => loadArticles(e.target.value.trim()));
+    // Поиск
+    document.getElementById('searchInput').addEventListener('input', e => {
+      loadArticles(e.target.value.trim());
+    });
 
+    // Загрузка
     loadTags();
     loadArticles();
   </script>
