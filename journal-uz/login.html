@@ -17,49 +17,49 @@
   </nav>
 
   <div class="container mt-5">
-    <div class="card mx-auto shadow-lg" style="max-width: 420px; border-radius: 20px;">
-      <div class="card-header text-center bg-primary text-white rounded-top">
-        <h3 class="my-3" id="formTitle">Вход в систему</h3>
+    <div class="card mx-auto shadow-lg" style="max-width: 440px; border-radius: 20px;">
+      <div class="card-header text-center bg-primary text-white rounded-top py-4">
+        <h3 class="my-0" id="formTitle">Вход в систему</h3>
       </div>
       <div class="card-body p-4">
 
         <form id="authForm" novalidate>
           <div class="mb-3">
             <label class="form-label fw-semibold">Email</label>
-            <input type="email" class="form-control form-control-lg" id="email" required>
-            <div class="invalid-feedback">Введите корректный email</div>
+            <input type="email" class="form-control form-control-lg" id="email" required autocomplete="email">
           </div>
 
           <div class="mb-3 position-relative">
             <label class="form-label fw-semibold">Пароль</label>
-            <input type="password" class="form-control form-control-lg" id="password" required minlength="6">
-            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3 text-muted" id="togglePassword">
+            <input type="password" class="form-control form-control-lg" id="password" required minlength="6" autocomplete="current-password">
+            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted" id="togglePassword">
               <i class="fas fa-eye"></i>
             </button>
-            <div class="invalid-feedback">Минимум 6 символов</div>
           </div>
 
           <div class="mb-3 position-relative" id="confirmPasswordGroup" style="display: none;">
             <label class="form-label fw-semibold">Повторите пароль</label>
-            <input type="password" class="form-control form-control-lg" id="confirmPassword">
-            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3 text-muted" id="toggleConfirm">
+            <input type="password" class="form-control form-control-lg" id="confirmPassword" autocomplete="new-password">
+            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted" id="toggleConfirm">
               <i class="fas fa-eye"></i>
             </button>
             <div class="invalid-feedback" id="passwordMismatch">Пароли не совпадают</div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">Войти</button>
+          <button type="submit" class="btn btn-primary btn-lg w-100 mb-3" id="submitBtn">
+            Войти
+          </button>
         </form>
 
-        <div class="mt-4 text-center">
+        <div class="text-center">
           <button type="button" class="btn btn-link text-decoration-none" id="toggleBtn">
             Нет аккаунта? <strong>Зарегистрируйтесь</strong>
           </button>
         </div>
 
-        <div class="mt-3 text-center d-none" id="forgotPasswordSection">
-          <a href="#" id="forgotPassword" class="text-muted small d-block">
-            Забыли пароль? Сбросить
+        <div class="text-center mt-3 d-none" id="forgotPasswordSection">
+          <a href="#" id="forgotPassword" class="text-muted small">
+            Забыли пароль? → Сбросить
           </a>
         </div>
       </div>
@@ -72,124 +72,137 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const formTitle = document.getElementById('formTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    const toggleBtn = document.getElementById('toggleBtn');
     const authForm = document.getElementById('authForm');
-    const confirmGroup = document.getElementById('confirmPasswordGroup');
-    const confirmInput = document.getElementById('confirmPassword');
+    const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirmPassword');
+    const confirmGroup = document.getElementById('confirmPasswordGroup');
+    const submitBtn = document.getElementById('submitBtn');
+    const formTitle = document.getElementById('formTitle');
+    const toggleBtn = document.getElementById('toggleBtn');
     const forgotSection = document.getElementById('forgotPasswordSection');
 
     let isLogin = true;
 
     // Показать/скрыть пароль
-    document.getElementById('togglePassword').addEventListener('click', () => {
+    document.getElementById('togglePassword').onclick = () => {
       const type = passwordInput.type === 'password' ? 'text' : 'password';
       passwordInput.type = type;
-      document.querySelector('#togglePassword i').classList.toggle('fa-eye');
-      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash');
-    });
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash', type === 'password');
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye', type === 'text');
+    };
 
-    document.getElementById('toggleConfirm').addEventListener('click', () => {
+    document.getElementById('toggleConfirm').onclick = () => {
       const type = confirmInput.type === 'password' ? 'text' : 'password';
       confirmInput.type = type;
-      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye');
-      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash');
-    });
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash', type === 'password');
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye', type === 'text');
+    };
 
-    function updateFormMode() {
+    function updateMode() {
       if (isLogin) {
         formTitle.textContent = 'Вход в систему';
         submitBtn.textContent = 'Войти';
         toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
         confirmGroup.style.display = 'none';
+        forgotSection.classList.add('d-none');
       } else {
-        formTitle.textContent = 'Создание аккаунта';
+        formTitle.textContent = 'Регистрация';
         submitBtn.textContent = 'Зарегистрироваться';
         toggleBtn.innerHTML = 'Уже есть аккаунт? <strong>Войти</strong>';
         confirmGroup.style.display = 'block';
       }
-      forgotSection.classList.add('d-none');
     }
-    updateFormMode();
+    updateMode();
 
-    toggleBtn.addEventListener('click', () => {
+    toggleBtn.onclick = () => {
       isLogin = !isLogin;
-      updateFormMode();
+      updateMode();
       authForm.reset();
-    });
+    };
 
-    authForm.addEventListener('submit', async (e) => {
+    authForm.onsubmit = async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value.trim();
+
+      const email = emailInput.value.trim();
       const password = passwordInput.value;
 
       if (!isLogin && password !== confirmInput.value) {
-        alert('Пароли не совпадают!');
+        alert('Пароли не совпадают');
         return;
       }
 
       try {
         let result;
-       if (!isLogin) {
-  result = await supabase.auth.signUp(
-    { email, password },
-    {
-      emailRedirectTo: 'https://journal-uz.vercel.app/profile.html'
- 
-    }
-  );
 
-  if (result.data.user && result.data.user.identities?.length === 0) {
-    alert('Этот email уже зарегистрирован!');
-    return;
-  }
-
-  alert('Регистрация успешна! Подтвердите email — письмо уже отправлено.');
-  return; 
-}
+        if (isLogin) {
+          // ВХОД
+          result = await supabase.auth.signInWithPassword({ email, password });
+        } else {
+          // РЕГИСТРАЦИЯ — САМАЯ ВАЖНАЯ СТРОКА!
+          result = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: location.origin + '/profile.html'   // ← ЭТО ВСЁ ЧТО НУЖНО!
+            }
+          });
+        }
 
         if (result.error) throw result.error;
 
-        // Только после входа — проверяем профиль
+        // РЕГИСТРАЦИЯ — просто показываем сообщение и ждём подтверждения
+        if (!isLogin) {
+          alert('Регистрация успешна!\nПроверьте почту и перейдите по ссылке для подтверждения аккаунта.');
+          authForm.reset();
+          return;
+        }
+
+        // ВХОД — проверяем профиль
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, role')
+          .select('full_name')
           .eq('id', result.data.user.id)
           .single();
 
         if (!profile?.full_name) {
           location.href = 'profile.html';
         } else {
-          location.href = 'index.html'; // Все с заполненным именем — на главную
+          location.href = 'index.html';
         }
+
       } catch (err) {
         if (isLogin && err.message.includes('Invalid login credentials')) {
           alert('Неверный email или пароль');
           forgotSection.classList.remove('d-none');
+        } else if (err.message.includes('User already registered')) {
+          alert('Этот email уже зарегистрирован');
         } else {
           alert('Ошибка: ' + err.message);
         }
       }
-    });
+    };
 
-    document.getElementById('forgotPassword').addEventListener('click', async (e) => {
+    // Сброс пароля
+    document.getElementById('forgotPassword').onclick = async (e) => {
       e.preventDefault();
       const email = prompt('Введите email для сброса пароля:');
       if (!email) return;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://journal-uz.vercel.app/reset-password.html'
+        redirectTo: location.origin + '/reset-password.html'
       });
-      error ? alert('Ошибка: ' + error.message) : alert('Письмо отправлено на ' + email);
-    });
+
+      error
+        ? alert('Ошибка: ' + error.message)
+        : alert('Письмо для сброса пароля отправлено на ' + email);
+    };
   </script>
 
   <style>
-    .btn-primary { background: #667eea !important; border: none; }
+    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2) !important; border: none; }
     .btn-primary:hover { background: #5a6fd8 !important; }
-    #togglePassword, #toggleConfirm { z-index: 10; }
+    .card { box-shadow: 0 20px 40px rgba(102,126,234,0.15); }
   </style>
 </body>
 </html>
-
