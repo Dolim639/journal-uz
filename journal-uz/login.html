@@ -157,6 +157,24 @@
       authForm.classList.add('was-validated');
     });
   </script>
+  <div class="text-center mt-3">
+  <a href="#" id="forgotPassword" class="text-muted small">Забыли пароль?</a>
+</div>
+
+<script>
+  document.getElementById('forgotPassword').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = prompt('Введите ваш email:');
+    if (!email) return;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://journal-uz.vercel.app/login.html'
+    });
+
+    if (error) alert('Ошибка: ' + error.message);
+    else alert('Письмо для сброса пароля отправлено на ' + email);
+  });
+</script>
 
   <style>
     .invalid-feedback#passwordMismatch { display: none; }
@@ -166,3 +184,4 @@
   </style>
 </body>
 </html>
+
