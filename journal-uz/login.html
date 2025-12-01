@@ -74,7 +74,7 @@
     .password-eye {
       position: absolute;
       right: 16px;
-      top: 50%;
+      top: 50%+4px;
       transform: translateY(-50%);
       font-size: 1.25rem;
       color: #94a3b8;
@@ -195,8 +195,8 @@
     document.getElementById("togglePassword").onclick = () =>
       toggleEye("togglePassword", "password");
 
-    document.getElementById("toggleConfirm").onclick = () =>
-      toggleEye("toggleConfirm", "confirmPassword");
+   const tc = document.getElementById("toggleConfirm");
+if (tc) tc.onclick = () => toggleEye("toggleConfirm", "confirmPassword");
 
     function updateMode() {
       if (isLogin) {
@@ -275,3 +275,4 @@
 
 </body>
 </html>
+
