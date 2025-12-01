@@ -10,28 +10,49 @@
 </head>
 <body class="bg-light">
 
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
     <div class="container">
       <a class="navbar-brand fw-bold" href="index.html">Журнал UZ</a>
-      <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
+      <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+        <i class="fas fa-sign-out-alt me-2"></i>Выйти
+      </button>
     </div>
   </nav>
 
   <div class="container mt-5">
-    <div class="card mx-auto shadow-lg" style="max-width: 500px; border-radius: 20px;">
+    <div class="card mx-auto shadow-lg border-0" style="max-width: 520px; border-radius: 24px; overflow: hidden;">
       <div class="card-body p-5 text-center">
-        <i class="fas fa-user-edit fa-4x text-primary mb-4"></i>
-        <h3 class="fw-bold">Завершите регистрацию</h3>
-        <p class="text-muted">Введите ваше полное имя для публикаций</p>
+        <!-- Красивая фиолетовая иконка профиля -->
+        <div class="mx-auto mb-4 rounded-circle d-flex align-items-center justify-content-center" 
+             style="width: 120px; height: 120px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);">
+          <i class="fas fa-user-edit fa-4x text-white"></i>
+        </div>
 
-        <form id="profileForm" class="mt-4">
+        <h3 class="fw-bold mb-3">Завершите регистрацию</h3>
+        <p class="text-muted mb-4">Введите ваше полное имя — оно будет указано под статьями</p>
+
+        <form id="profileForm">
           <div class="mb-4">
-            <input type="text" class="form-control form-control-lg text-center" id="fullName" placeholder="Иванов Иван Иванович" required>
+            <input 
+              type="text" 
+              class="form-control form-control-lg text-center shadow-sm" 
+              id="fullName" 
+              placeholder="Иванов Иван Иванович" 
+              required
+              style="border-radius: 50px; padding: 0.9rem 1.5rem;">
           </div>
-          <button type="submit" class="btn btn-primary btn-lg w-100">
+
+          <button type="submit" class="btn btn-primary btn-lg w-100 shadow-lg" 
+                  style="border-radius: 50px; padding: 0.9rem; font-weight: 600; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none;">
             Сохранить и продолжить
           </button>
         </form>
+
+        <div id="loading" class="mt-4 d-none">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Сохранение...</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -42,41 +63,77 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
+    // Кнопка выхода — РАБОТАЕТ
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        alert('Ошибка выхода: ' + error.message);
+      } else {
+        location.href = 'login.html';
+      }
+    });
 
-    // Проверка сессии и профиля
+    // Проверка сессии
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) location.href = 'login.html';
 
-    const { data: profile } = await supabase
+    if (!session) {
+      location.href = 'login.html';
+      // Не продолжаем выполнение скрипта
+      throw new Error('No session'); // остановит дальнейший код
+    }
+
+    // Проверка профиля
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('id', session.user.id)
       .single();
 
     // Если имя уже есть — сразу на главную
-    if (profile?.full_name) {
+    if (profile?.full_name && profile.full_name.trim() !== '') {
       location.href = 'index.html';
-      return;
     }
 
     // Если нет — показываем форму
-    document.getElementById('profileForm').onsubmit = async (e) => {
+    const form = document.getElementById('profileForm');
+    const input = document.getElementById('fullName');
+    const loading = document.getElementById('loading');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const fullName = document.getElementById('fullName').value.trim();
-      if (!fullName) return alert('Введите имя!');
+
+      const fullName = input.value.trim();
+
+      if (!fullName) {
+        alert('Введите ваше имя!');
+        return;
+      }
+
+      if (fullName.split(' ').length < 2) {
+        alert('Введите имя и фамилию');
+        return;
+      }
+
+      loading.classList.remove('d-none');
+      form.querySelector('button').disabled = true;
 
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, updated_at: new Date().toISOString() })
+        .update({ 
+          full_name: fullName,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', session.user.id);
 
-      if (error) alert('Ошибка: ' + error.message);
-      else {
-        alert('Добро пожаловать, ' + fullName.split(' ')[1] + '!');
+      if (error) {
+        alert('Ошибка сохранения: ' + error.message);
+        loading.classList.add('d-none');
+        form.querySelector('button').disabled = false;
+      } else {
+        alert(`Добро пожаловать, ${fullName.split(' ')[1]}!`);
         location.href = 'index.html';
       }
-    };
+    });
   </script>
 </body>
 </html>
