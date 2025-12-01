@@ -26,26 +26,23 @@
         <form id="authForm" novalidate>
           <div class="mb-3">
             <label class="form-label fw-semibold">Email</label>
-            <input type="email" class="form-control form-control-lg" id="email" required>
-            <div class="invalid-feedback">Введите корректный email</div>
+            <input type="email" class="form-control form-control-lg" id="email" required autocomplete="email">
           </div>
 
           <div class="mb-3 position-relative">
             <label class="form-label fw-semibold">Пароль</label>
-            <input type="password" class="form-control form-control-lg" id="password" required minlength="6">
+            <input type="password" class="form-control form-control-lg" id="password" required minlength="6" autocomplete="current-password">
             <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted" id="togglePassword">
               <i class="fas fa-eye"></i>
             </button>
-            <div class="invalid-feedback">Минимум 6 символов</div>
           </div>
 
           <div class="mb-3 position-relative" id="confirmPasswordGroup" style="display: none;">
             <label class="form-label fw-semibold">Повторите пароль</label>
-            <input type="password" class="form-control form-control-lg" id="confirmPassword">
+            <input type="password" class="form-control form-control-lg" id="confirmPassword" autocomplete="new-password">
             <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted" id="toggleConfirm">
               <i class="fas fa-eye"></i>
             </button>
-            <div class="invalid-feedback" id="passwordMismatch">Пароли не совпадают</div>
           </div>
 
           <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">Войти</button>
@@ -80,22 +77,20 @@
     const confirmInput = document.getElementById('confirmPassword');
     const passwordInput = document.getElementById('password');
     const forgotSection = document.getElementById('forgotPasswordSection');
-    const togglePassword = document.getElementById('togglePassword');
-    const toggleConfirm = document.getElementById('toggleConfirm');
 
     let isLogin = true;
 
     // Показать/скрыть пароль
-    togglePassword.onclick = () => {
+    document.getElementById('togglePassword').onclick = () => {
       const type = passwordInput.type === 'password' ? 'text' : 'password';
       passwordInput.type = type;
-      togglePassword.querySelector('i').className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+      document.querySelector('#togglePassword i').className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
     };
 
-    toggleConfirm.onclick = () => {
+    document.getElementById('toggleConfirm').onclick = () => {
       const type = confirmInput.type === 'password' ? 'text' : 'password';
       confirmInput.type = type;
-      toggleConfirm.querySelector('i').className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+      document.querySelector('#toggleConfirm i').className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
     };
 
     function updateFormMode() {
@@ -105,6 +100,7 @@
         toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
         confirmGroup.style.display = 'none';
         confirmInput.removeAttribute('required');
+        forgotSection.classList.add('d-none');
       } else {
         formTitle.textContent = 'Создание аккаунта';
         submitBtn.textContent = 'Зарегистрироваться';
@@ -112,7 +108,6 @@
         confirmGroup.style.display = 'block';
         confirmInput.setAttribute('required', '');
       }
-      forgotSection.classList.add('d-none');
     }
 
     updateFormMode();
@@ -135,77 +130,69 @@
       }
 
       try {
-        authForm.onsubmit = async (e) => {
-  e.preventDefault();
+        if (isLogin) {
+          // === ВХОД ===
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
 
-  const email = document.getElementById('email').value.trim();
-  const password = passwordInput.value;
+          // Успешный вход — проверяем профиль
+          await checkProfileAndRedirect();
+        } else {
+          // === РЕГИСТРАЦИЯ ===
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${location.origin}/profile.html`  // сюда придёт после подтверждения
+            }
+          });
 
-  if (!isLogin && password !== confirmInput.value) {
-    alert('Пароли не совпадают!');
-    return;
-  }
+          if (error) throw error;
 
-  try {
-    let result;
-
-    if (isLogin) {
-      result = await supabase.auth.signInWithPassword({ email, password });
-    } else {
-      // РЕГИСТРАЦИЯ
-      result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${location.origin}/profile.html`, // ← сюда придёт после подтверждения
+          // Если пользователь уже подтверждён (редкий случай) — сразу логиним
+          if (data.user && data.user.confirmed_at) {
+            await checkProfileAndRedirect();
+          } else {
+            alert('На вашу почту отправлено письмо с подтверждением!\nПроверьте папку "Спам", если письмо не пришло.');
+          }
         }
-      });
-
-      // Если пользователь уже подтверждён (редкий случай) — сразу логиним
-      if (result.data.user && result.data.user.identities?.length === 0) {
-        alert('Этот email уже зарегистрирован');
-        return;
+      } catch (err) {
+        if (isLogin && err.message.toLowerCase().includes('invalid login credentials')) {
+          alert('Неверный email или пароль');
+          forgotSection.classList.remove('d-none');
+        } else if (err.message.includes('already registered')) {
+          alert('Этот email уже зарегистрирован');
+        } else {
+          alert('Ошибка: ' + err.message);
+        }
       }
+    };
 
-      alert('На вашу почту отправлено письмо с подтверждением!\nЕсли не пришло — проверьте спам или нажмите "Отправить снова"');
-      return; // ← ВАЖНО: останавливаем выполнение, ждём подтверждения
+    // Функция проверки профиля и редиректа (используется и при входе, и при подтверждении
+    async function checkProfileAndRedirect() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return location.href = 'login.html';
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('full_name, role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = нет строки
+
+      if (!profile?.full_name) {
+        location.href = 'profile.html';
+      } else {
+        const role = profile.role || 'reader';
+        if (role === 'admin') location.href = 'admin.html';
+        else if (role === 'reviewer') location.href = 'review.html';
+        else if (role === 'author') location.href = 'dashboard.html';
+        else location.href = 'index.html';
+      }
     }
 
-    // ======= Только для входа =======
-    if (result.error) throw result.error;
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('Нет сессии');
-
-    // Проверяем, заполнен ли профиль
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, role')
-      .eq('id', session.user.id)
-      .single();
-
-    if (!profile?.full_name) {
-      location.href = 'profile.html';
-    } else {
-      // перенаправление по ролям
-      if (profile.role === 'admin') location.href = 'admin.html';
-      else if (profile.role === 'reviewer') location.href = 'review.html';
-      else if (profile.role === 'reader') location.href = 'index.html';
-      else location.href = 'dashboard.html';
-    }
-  } catch (err) {
-    // обработка ошибок (осталось как у тебя)
-    if (isLogin && err.message.includes('Invalid login credentials')) {
-      alert('Неверный email или пароль');
-      forgotSection.classList.remove('d-none');
-    } else if (!isLogin && err.message.includes('User already registered')) {
-      alert('Этот email уже зарегистрирован');
-    } else {
-      alert('Ошибка: ' + err.message);
-    }
-  }
-};
-
+    // Сброс пароля
     document.getElementById('forgotPassword').onclick = async (e) => {
       e.preventDefault();
       const email = prompt('Введите email для сброса пароля:');
@@ -215,17 +202,29 @@
         redirectTo: `${location.origin}/reset-password.html`
       });
 
-      error ? alert('Ошибка: ' + error.message) : alert('Письмо отправлено!');
+      error ? alert('Ошибка: ' + error.message) : alert('Письмо для сброса пароля отправлено!');
     };
+
+    // Если пользователь уже авторизован — сразу проверяем профиль
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) checkProfileAndRedirect();
+    });
   </script>
 
   <style>
-    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2) !important; border: none; }
-    .btn-primary:hover { background: #5a6fd8 !important; }
-    .card { box-shadow: 0 20px 40px rgba(102,126,234,0.15); }
-    #forgotPasswordSection { transition: all 0.3s ease; }
+    .btn-primary { 
+      background: linear-gradient(135deg, #667eea, #764ba2) !important; 
+      border: none; 
+      border-radius: 50px;
+    }
+    .btn-primary:hover { 
+      background: #5a6fd8 !important; 
+      transform: translateY(-2px);
+    }
+    .card { 
+      box-shadow: 0 20px 40px rgba(102,126,234,0.15); 
+      border: none;
+    }
   </style>
 </body>
 </html>
-
-
