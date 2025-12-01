@@ -132,14 +132,23 @@
 
       try {
         let result;
-        if (isLogin) {
-          result = await supabase.auth.signInWithPassword({ email, password });
-        } else {
-          result = await supabase.auth.signUp({ email, password });
-          alert('Регистрация успешна! Подтвердите email — письмо уже в почте.');
-          // НЕ ПЕРЕКИДЫВАЕМ НИКУДА! Ждём подтверждения
-          return;
-        }
+       if (!isLogin) {
+  result = await supabase.auth.signUp(
+    { email, password },
+    {
+      emailRedirectTo: 'https://journal-uz.vercel.app/profile.html'
+ 
+    }
+  );
+
+  if (result.data.user && result.data.user.identities?.length === 0) {
+    alert('Этот email уже зарегистрирован!');
+    return;
+  }
+
+  alert('Регистрация успешна! Подтвердите email — письмо уже отправлено.');
+  return; 
+}
 
         if (result.error) throw result.error;
 
@@ -183,3 +192,4 @@
   </style>
 </body>
 </html>
+
