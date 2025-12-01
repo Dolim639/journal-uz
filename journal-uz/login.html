@@ -3,146 +3,163 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход / Регистрация — Scienta UZ</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <title>Вход — Scienta UZ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --secondary: #8b5cf6;
+    }
+
     body {
-      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
       min-height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .card {
-      border: none;
-      border-radius: 32px;
-      overflow: hidden;
-      box-shadow: 0 30px 60px rgba(99, 102, 241, 0.35);
-      background: #ffffff;
-    }
-    .card-header {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      color: white;
-      text-align: center;
-      padding: 2.2rem 1rem;
-      font-size: 1.7rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .form-control {
-      height: 58px;
-      border-radius: 20px;
-      border: none;
-      background: #f8f9ff;
-      padding-left: 1.5rem;
-      padding-right: 4.5rem;
-      font-size: 1.1rem;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .form-control:focus {
-      background: #f0f2ff;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-      border: inset 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .input-group {
-      position: relative;
+      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
       display: flex;
       align-items: center;
+      padding: 2rem 0;
     }
+
+    .login-card {
+      background: white;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(99, 102, 241, 0.35);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      text-align: center;
+      padding: 2.5rem 1rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    .card-body {
+      padding: 2.5rem;
+    }
+
+    .form-control {
+      height: 58px;
+      border: none;
+      border-radius: 20px;
+      background: #f8f9ff;
+      padding: 0 1.5rem 0 1.5rem;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+      background: #eef2ff;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
     .toggle-password {
       position: absolute;
-      right: 12px;
+      right: 8px;
       top: 50%;
       transform: translateY(-50%);
+      width: 46px;
+      height: 46px;
       background: white;
       border: 2px solid #e2e8f0;
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       color: #64748b;
+      font-size: 1.25rem;
       transition: all 0.2s ease;
-      z-index: 10;
     }
+
     .toggle-password:hover {
-      color: #6366f1;
-      border-color: #6366f1;
+      color: var(--primary);
+      border-color: var(--primary);
       background: #f8f9ff;
     }
-    .btn-primary {
+
+    .btn-login {
       height: 60px;
       border-radius: 30px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border: none;
       font-size: 1.2rem;
       font-weight: 600;
-      box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
       transition: all 0.3s ease;
     }
-    .btn-primary:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5);
+
+    .btn-login:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4);
     }
-    .toggle-link {
+
+    .toggle-text {
       color: #6366f1;
       font-weight: 600;
     }
   </style>
 </head>
-<body class="d-flex align-items-center">
+<body>
 
   <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-lg-4 col-md-6 col-11">
+    <div class="login-card">
 
-        <div class="card">
+      <div class="card-header">
+        <div id="formTitle">Вход в систему</div>
+      </div>
 
-          <div class="card-header">
-            <div id="formTitle">Вход в систему</div>
+      <div class="card-body">
+
+        <form id="authForm" novalidate>
+
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" class="form-control" id="email" placeholder="you@example.com" required autocomplete="email">
           </div>
 
-          <div class="card-body p-5 pt-4">
-
-            <form id="authForm" novalidate>
-
-              <div class="mb-4">
-                <label class="form-label fw-semibold mb-2">Email</label>
-                <input type="email" class="form-control" id="email" placeholder="you@example.com" required autocomplete="email">
-              </div>
-
-              <div class="mb-4 input-group">
-                <label class="form-label fw-semibold mb-2">Пароль</label>
-                <input type="password" class="form-control" id="password" required minlength="6" autocomplete="current-password">
-                <button type="button" class="toggle-password" id="togglePassword">
-                  <i class="fas fa-eye fa-lg"></i>
-                </button>
-              </div>
-
-              <div class="mb-4 input-group d-none" id="confirmPasswordGroup">
-                <label class="form-label fw-semibold mb-2">Повторите пароль</label>
-                <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
-                <button type="button" class="toggle-password" id="toggleConfirm">
-                  <i class="fas fa-eye fa-lg"></i>
-                </button>
-              </div>
-
-              <button type="submit" class="btn btn-primary w-100 mb-3" id="submitBtn">Войти</button>
-
-            </form>
-
-            <div class="text-center">
-              <button type="button" class="btn btn-link text-decoration-none toggle-link" id="toggleBtn">
-                Нет аккаунта? <strong>Зарегистрируйтесь</strong>
-              </button>
-            </div>
-
-            <div class="text-center mt-3 d-none" id="forgotPasswordSection">
-              <a href="#" id="forgotPassword" class="text-primary small fw-medium">Забыли пароль? Сбросить</a>
-            </div>
-
+          <!-- Пароль -->
+          <div class="mb-4 input-wrapper">
+            <label class="form-label fw-semibold">Пароль</label>
+            <input type="password" class="form-control pe-5" id="password" required minlength="6" autocomplete="current-password">
+            <button type="button" class="toggle-password" id="togglePassword">
+              <i class="fas fa-eye"></i>
+            </button>
           </div>
+
+          <!-- Повтор пароля (только при регистрации) -->
+          <div class="mb-4 input-wrapper d-none" id="confirmPasswordGroup">
+            <label class="form-label fw-semibold">Повторите пароль</label>
+            <input type="password" class="form-control pe-5" id="confirmPassword" autocomplete="new-password">
+            <button type="button" class="toggle-password" id="toggleConfirm">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-login w-100" id="submitBtn">
+            Войти
+          </button>
+        </form>
+
+        <div class="text-center mt-4">
+          <button type="button" class="btn btn-link text-decoration-none toggle-text" id="toggleBtn">
+            Нет аккаунта? <strong>Зарегистрируйтесь</strong>
+          </button>
+        </div>
+
+        <div class="text-center mt-3 d-none" id="forgotPasswordSection">
+          <a href="#" id="forgotPassword" class="text-primary small fw-medium">Забыли пароль? Сбросить</a>
         </div>
 
       </div>
@@ -160,53 +177,51 @@
     const toggleBtn = document.getElementById('toggleBtn');
     const authForm = document.getElementById('authForm');
     const confirmGroup = document.getElementById('confirmPasswordGroup');
-    const confirmInput = document.getElementById('confirmPassword');
     const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirmPassword');
     const forgotSection = document.getElementById('forgotPasswordSection');
 
     let isLogin = true;
 
-    // Иконки — теперь 100% по центру
+    // Иконки глаз — 100% по центру
     document.getElementById('togglePassword').onclick = () => {
-      const isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      document.querySelector('#togglePassword i').classList.toggle('fa-eye', !isPassword);
-      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash', isPassword);
+      const show = passwordInput.type === 'password';
+      passwordInput.type = show ? 'text' : 'password';
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye', !show);
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash', show);
     };
 
     document.getElementById('toggleConfirm')?.onclick = () => {
-      const isPassword = confirmInput.type === 'password';
-      confirmInput.type = isPassword ? 'text' : 'password';
-      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye', !isPassword);
-      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash', isPassword);
+      const show = confirmInput.type === 'password';
+      confirmInput.type = show ? 'text' : 'password';
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye', !show);
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash', show);
     };
 
-    function updateFormMode() {
+    function updateMode() {
       if (isLogin) {
         formTitle.textContent = 'Вход в систему';
         submitBtn.textContent = 'Войти';
         toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
         confirmGroup.classList.add('d-none');
-        forgotSection.classList.add('d('d-none');
+        forgotSection.classList.add('d-none');
       } else {
         formTitle.textContent = 'Создание аккаунта';
         submitBtn.textContent = 'Зарегистрироваться';
         toggleBtn.innerHTML = 'Уже есть аккаунт? <strong>Войти</strong>';
-        confirmGroup.classList.remove('d('d-none');
+        confirmGroup.classList.remove('d-none');
       }
     }
-
-    updateFormMode();
+    updateMode();
 
     toggleBtn.onclick = () => {
       isLogin = !isLogin;
-      updateFormMode();
+      updateMode();
       authForm.reset();
     };
 
-    authForm.onsubmit = async (e) => {
+    authForm.onsubmit = async e => {
       e.preventDefault();
-
       const email = document.getElementById('email').value.trim();
       const password = passwordInput.value;
 
@@ -219,17 +234,16 @@
           const { error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
         } else {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: `${location.origin}/profile.html` }
+          const { error } = await supabase.auth.signUp({
+            email, password,
+            options: { emailRedirectTo: location.origin + '/profile.html' }
           });
           if (error) throw error;
           alert('Проверьте почту — отправлено письмо с подтверждением!');
           return;
         }
 
-        // После входа — проверяем имя
+        // После успешного входа
         const { data: { session } } = await supabase.auth.getSession();
         const { data: profile } = await supabase
           .from('profiles')
@@ -240,7 +254,7 @@
         location.href = profile?.full_name?.trim() ? 'index.html' : 'profile.html';
 
       } catch (err) {
-        if (isLogin && err.message.includes('Invalid')) {
+        if (err.message.includes('Invalid login credentials')) {
           alert('Неверный email или пароль');
           forgotSection.classList.remove('d-none');
         } else {
@@ -249,15 +263,15 @@
       }
     };
 
-    document.getElementById('forgotPassword').onclick = async (e) => {
+    document.getElementById('forgotPassword')?.addEventListener('click', async e => {
       e.preventDefault();
-      const email = prompt('Введите email:');
+      const email = prompt('Введите email для сброса пароля:');
       if (!email) return;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${location.origin}/reset-password.html`
+        redirectTo: location.origin + '/reset-password.html'
       });
-      alert(error ? 'Ошибка' : 'Письмо отправлено!');
-    };
+      alert(error ? 'Ошибка' : 'Письмо отправили на почту!');
+    });
   </script>
 </body>
 </html>
