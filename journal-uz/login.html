@@ -1,3 +1,5 @@
+
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -7,61 +9,121 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #8b5cf6;
+    }
+    body {
+      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+      min-height: 100vh;
+    }
+    .card {
+      border: none;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(99, 102, 241,0.3);
+    }
+    .card-header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      padding: 2rem;
+      text-align: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.6rem;
+    }
+    .form-control {
+      border-radius: 16px;
+      padding: 0.9rem 1.2rem;
+      font-size: 1.1rem;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border: none;
+      border-radius: 50px;
+      padding: 0.95rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(99,102,241,0.4);
+    }
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 1.3rem;
+      cursor: pointer;
+      z-index: 10;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .toggle-password:hover { color: var(--primary); }
+    .input-wrapper {
+      position: relative;
+    }
+  </style>
 </head>
-<body class="bg-light">
+<body>
 
-  <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
-    <div class="container">
-      <a class="navbar-brand fw-bold" href="index.html">Scienta UZ</a>
-    </div>
-  </nav>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-4 col-md-6 col-11">
+        <div class="card">
 
-  <div class="container mt-5">
-    <div class="card mx-auto shadow-lg border-0" style="max-width: 440px; border-radius: 24px; overflow: hidden;">
-      <div class="card-header text-center text-white py-4" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
-        <h3 class="my-2 fw-bold" id="formTitle">Вход в систему</h3>
-      </div>
-
-      <div class="card-body p-5">
-
-        <form id="authForm" novalidate>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">Email</label>
-            <input type="email" class="form-control form-control-lg" id="email" placeholder="you@example.com" required autocomplete="email">
+          <div class="card-header">
+            <div id="formTitle">Вход в систему</div>
           </div>
 
-          <div class="mb-4 position-relative">
-            <label class="form-label fw-semibold">Пароль</label>
-            <input type="password" class="form-control form-control-lg pe-5" id="password" required minlength="6" autocomplete="current-password">
-            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted px-3" id="togglePassword" style="z-index: 10;">
-              <i class="fas fa-eye fa-lg"></i>
-            </button>
+          <div class="card-body p-5">
+
+            <form id="authForm" novalidate>
+              <div class="mb-4">
+                <label class="form-label fw-semibold">Email</label>
+                <input type="email" class="form-control" id="email" placeholder="you@example.com" required autocomplete="email">
+              </div>
+
+              <div class="mb-4 input-wrapper">
+                <label class="form-label fw-semibold">Пароль</label>
+                <input type="password" class="form-control" id="password" required minlength="6" autocomplete="current-password">
+                <button type="button" class="toggle-password" id="togglePassword">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+
+              <div class="mb-4 input-wrapper d-none" id="confirmPasswordGroup">
+                <label class="form-label fw-semibold">Повторите пароль</label>
+                <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
+                <button type="button" class="toggle-password" id="toggleConfirm">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100" id="submitBtn">Войти</button>
+            </form>
+
+            <div class="text-center mt-4">
+              <button type="button" class="btn btn-link text-decoration-none" id="toggleBtn">
+                Нет аккаунта? <strong>Зарегистрируйтесь</strong>
+              </button>
+            </div>
+
+            <div class="text-center mt-3 d-none" id="forgotPasswordSection">
+              <a href="#" id="forgotPassword" class="text-primary small fw-medium">Забыли пароль? Сбросить</a>
+            </div>
+
           </div>
-
-          <div class="mb-4 position-relative" id="confirmPasswordGroup" style="display: none;">
-            <label class="form-label fw-semibold">Повторите пароль</label>
-            <input type="password" class="form-control form-control-lg pe-5" id="confirmPassword" autocomplete="new-password">
-            <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted px-3" id="toggleConfirm" style="z-index: 10;">
-              <i class="fas fa-eye fa-lg"></i>
-            </button>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold shadow-sm" id="submitBtn"
-                  style="border-radius: 50px; padding: 0.85rem; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none;">
-            Войти
-          </button>
-        </form>
-
-        <div class="mt-4 text-center">
-          <button type="button" class="btn btn-link text-decoration-none text-muted" id="toggleBtn">
-            Нет аккаунта? <strong class="text-primary">Зарегистрируйтесь</strong>
-          </button>
-        </div>
-
-        <div class="mt-3 text-center d-none" id="forgotPasswordSection">
-          <a href="#" id="forgotPassword" class="text-primary small fw-medium">
-            Забыли пароль? Сбросить
-          </a>
         </div>
       </div>
     </div>
@@ -84,34 +146,34 @@
 
     let isLogin = true;
 
-    // Иконки показать/скрыть — теперь идеально по центру
-    document.getElementById('togglePassword').onclick = () => {
+    // Иконки — теперь идеально по центру
+    document.getElementById('togglePassword').addEventListener('click', () => {
       const type = passwordInput.type === 'password' ? 'text' : 'password';
       passwordInput.type = type;
-      const icon = document.querySelector('#togglePassword i');
-      icon.className = type === 'password' ? 'fas fa-eye fa-lg' : 'fas fa-eye-slash fa-lg';
-    };
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye');
+      document.querySelector('#togglePassword i').classList.toggle('fa-eye-slash');
+    });
 
-    document.getElementById('toggleConfirm').onclick = () => {
+    document.getElementById('toggleConfirm')?.addEventListener('click', () => {
       const type = confirmInput.type === 'password' ? 'text' : 'password';
       confirmInput.type = type;
-      const icon = document.querySelector('#toggleConfirm i');
-      icon.className = type === 'password' ? 'fas fa-eye fa-lg' : 'fas fa-eye-slash fa-lg';
-    };
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye');
+      document.querySelector('#toggleConfirm i').classList.toggle('fa-eye-slash');
+    });
 
     function updateFormMode() {
       if (isLogin) {
         formTitle.textContent = 'Вход в систему';
         submitBtn.textContent = 'Войти';
         toggleBtn.innerHTML = 'Нет аккаунта? <strong class="text-primary">Зарегистрируйтесь</strong>';
-        confirmGroup.style.display = 'none';
+        confirmGroup.classList.add('d-none');
         confirmInput.removeAttribute('required');
         forgotSection.classList.add('d-none');
       } else {
         formTitle.textContent = 'Создание аккаунта';
         submitBtn.textContent = 'Зарегистрироваться';
         toggleBtn.innerHTML = 'Уже есть аккаунт? <strong class="text-primary">Войти</strong>';
-        confirmGroup.style.display = 'block';
+        confirmGroup.classList.remove('d-none');
         confirmInput.setAttribute('required', '');
       }
     }
@@ -131,8 +193,7 @@
       const password = passwordInput.value;
 
       if (!isLogin && password !== confirmInput.value) {
-        alert('Пароли не совпадают!');
-        return;
+        return alert('Пароли не совпадают!');
       }
 
       try {
@@ -143,21 +204,15 @@
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            options: {
-              emailRedirectTo: `${location.origin}/profile.html`
-            }
+            options: { emailRedirectTo: `${location.origin}/profile.html` }
           });
-
           if (error) throw error;
 
-          if (data.user && !data.user.confirmed_at)
-            ? alert('Проверьте почту — отправлено письмо с подтверждением!')
-            : null;
-
-          return; // ждём подтверждения
+          alert('Проверьте почту — отправлено письмо с подтверждением!');
+          return;
         }
 
-        // Успешный вход — проверяем профиль
+        // Успешный вход
         const { data: { session } } = await supabase.auth.getSession();
         const { data: profile } = await supabase
           .from('profiles')
@@ -165,13 +220,13 @@
           .eq('id', session.user.id)
           .single();
 
-        location.href = profile?.full_name?.trim() ? 'profile.html' : 'index.html';
+        location.href = profile?.full_name?.trim() ? 'index.html' : 'profile.html';
 
       } catch (err) {
         if (isLogin && err.message.includes('Invalid login credentials')) {
           alert('Неверный email или пароль');
           forgotSection.classList.remove('d-none');
-        } else if (!isLogin && err.message.includes('already registered')) {
+        } else if (err.message.includes('already registered')) {
           alert('Этот email уже зарегистрирован');
         } else {
           alert('Ошибка: ' + err.message);
@@ -189,24 +244,8 @@
         redirectTo: `${location.origin}/reset-password.html`
       });
 
-      error ? alert('Ошибка: ' + error.message) : alert('Письмо для сброса отправлено на почту!');
+      error ? alert('Ошибка: ' + error.message) : alert('Письмо отправлено!');
     };
   </script>
-
-  <style>
-    .card { box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15); }
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-      border: none;
-      border-radius: 50px;
-      padding: 0.85rem;
-    }
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #5a52e0, #7c4dff) !important;
-      transform: translateY(-2px);
-    }
-    /* Убираем стандартную обводку при фокусе у иконок */
-    #togglePassword, #toggleConfirm { outline: none !important; }
-  </style>
 </body>
 </html>
