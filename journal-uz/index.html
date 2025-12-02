@@ -184,9 +184,7 @@
             <div class="card border-0 shadow-lg text-white" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border-radius: 20px;">
               <div class="card-body p-4">
                 <h5 class="card-title fw-bold">
-                  <a href="article.html?id=${a.id}" class="text-white text-decoration-none hover-text-primary">
-                    ${a.title}
-                  </a>
+                  <a href="article.html?id=${a.id}" style="color: #A020F0; text-decoration: none;">${a.title}</a>
                 </h5>
                 <p class="text-white-75 mb-2"><strong>Авторы:</strong> ${a.authors}</p>
                 <p class="small opacity-90">${a.abstract.substring(0, 280)}...</p>
@@ -198,7 +196,7 @@
                     ${new Date(a.submitted_at).toLocaleDateString('ru')}
                     <span class="ms-3"><i class="fas fa-eye"></i> ${a.views || 0}</span>
                   </span>
-                  <a href="article.html?id=${a.id}" class="btn btn-outline-light btn-sm">Читать полностью</a>
+                  <a href="article.html?id=${a.id}" style="color: #A020F0; border-color: #A020F0;" class="btn btn-outline btn-sm">Читать полностью</a>
                 </div>
               </div>
             </div>
