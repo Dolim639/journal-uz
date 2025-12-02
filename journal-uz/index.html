@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scienta — Научный журнал Узбекистана</title>
+  <title>Scienta UZ — Научный журнал Узбекистана</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Красивая шапка с градиентом -->
+  <!-- Шапка -->
   <header class="py-4 shadow-lg" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <h1 class="display-5 fw-bold mb-0 text-white" style="text-shadow: 0 4px 12px rgba(0,0,0,0.4);">
           Scienta UZ
         </h1>
-
         <div id="authSection" class="text-white fs-5">
           <a href="login.html" class="btn btn-outline-light">Вход</a>
         </div>
@@ -36,20 +35,16 @@
   </section>
 
   <div class="container my-5">
-
-    <!-- Поиск — вернул красивую обводку и тень -->
+    <!-- Поиск -->
     <div class="row justify-content-center mb-5">
       <div class="col-lg-8">
         <div class="input-group input-group-lg shadow-lg" style="border-radius: 50px; overflow: hidden;">
           <span class="input-group-text bg-white border-0">
             <i class="fas fa-search text-primary"></i>
           </span>
-          <input 
-            type="text" 
-            id="searchInput" 
-            class="form-control border-0 shadow-none fs-5" 
-            placeholder="Поиск статей по названию, автору или тегу..."
-            style="border-radius: 0 50px 50px 0;">
+          <input type="text" id="searchInput" class="form-control border-0 shadow-none fs-5"
+                 placeholder="Поиск статей по названию, автору или тегу..."
+                 style="border-radius: 0 50px 50px 0;">
         </div>
       </div>
     </div>
@@ -81,10 +76,8 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
     const authSection = document.getElementById('authSection');
 
-    // Проверка авторизации
     async function initAuth() {
       const { data: { session } } = await supabase.auth.getSession();
-
       if (!session) {
         authSection.innerHTML = `<a href="login.html" class="btn btn-outline-light btn-lg px-4">Вход</a>`;
         return;
@@ -102,7 +95,6 @@
       }
 
       const name = profile.full_name.trim().split(' ')[0];
-
       authSection.innerHTML = `
         <div class="d-flex align-items-center gap-3">
           <span class="fw-medium">Привет, <strong>${name}</strong>!</span>
@@ -111,25 +103,21 @@
           </button>
         </div>
       `;
-
       document.getElementById('logoutBtn').onclick = async () => {
         await supabase.auth.signOut();
         location.reload();
       };
     }
-
     initAuth();
 
-    // Загрузка тегов
+    // Теги
     async function loadTags() {
       const { data: tags } = await supabase.from('tags').select('name').order('name');
       const cloud = document.getElementById('tagsCloud');
-      
       if (!tags?.length) {
         cloud.innerHTML = '<small class="text-white-50">Тегов пока нет</small>';
         return;
       }
-
       cloud.innerHTML = tags.map(t => `
         <a href="tag.html?tag=${encodeURIComponent(t.name)}" 
            class="btn btn-outline-light btn-sm px-3 opacity-75 hover-opacity-100">
@@ -138,11 +126,11 @@
       `).join('');
     }
 
-    // Загрузка статей (оставил как у тебя было — работает отлично)
+    // Статьи — теперь весь текст ЧЁРНЫЙ, ссылки пурпурные
     async function loadArticles(query = '') {
       let q = supabase
         .from('submissions')
-        .select('id, title, authors, abstract, views, submitted_at, article_id')
+        .select('id, title, authors, abstract, views, submitted_at')
         .eq('status', 'Опубликована')
         .order('submitted_at', { ascending: false });
 
@@ -152,7 +140,6 @@
       }
 
       const { data: articles } = await q;
-
       const list = document.getElementById('articlesList');
       const noRes = document.getElementById('noResults');
 
@@ -161,12 +148,10 @@
         noRes.classList.remove('d-none');
         return;
       }
-
       noRes.classList.add('d-none');
 
       const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
       const { data: allTags } = await supabase.from('tags').select('id, name');
-
       const tagMap = {};
       links?.forEach(l => {
         if (!tagMap[l.submission_id]) tagMap[l.submission_id] = [];
@@ -176,27 +161,32 @@
       list.innerHTML = articles.map(a => {
         const tagsHtml = (tagMap[a.id] || []).map(tid => {
           const tag = allTags.find(t => t.id === tid);
-          return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-light text-dark">${tag.name}</a>` : '';
-        }).join(' ');
+          return tag ? `<a href="tag.html?tag=${encodeURIComponent(tag.name)}" class="badge bg-light text-dark me-1">${tag.name}</a>` : '';
+        }).join('');
 
         return `
           <div class="col-12 mb-4">
-            <div class="card border-0 shadow-lg text-white" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border-radius: 20px;">
+            <div class="card border-0 shadow-lg" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-radius: 20px;">
               <div class="card-body p-4">
-                <h5 class="card-title fw-bold">
-                  <a href="article.html?id=${a.id}" style="color: #A020F0; text-decoration: none;">${a.title}</a>
+                <h5 class="card-title fw-bold mb-3">
+                  <a href="article.html?id=${a.id}" style="color: #A020F0; text-decoration: none;">
+                    ${a.title}
+                  </a>
                 </h5>
-                <p class="text-white-75 mb-2"><strong>Авторы:</strong> ${a.authors}</p>
-                <p class="small opacity-90">${a.abstract.substring(0, 280)}...</p>
+                <p class="text-dark mb-2"><strong>Авторы:</strong> ${a.authors}</p>
+                <p class="text-dark small lh-lg">${a.abstract.substring(0, 280)}...</p>
 
-                <div class="mb-3">${tagsHtml || ''}</div>
+                <div class="my-3">${tagsHtml || ''}</div>
 
-                <div class="d-flex justify-content-between align-items-center text-white-50 small">
+                <div class="d-flex justify-content-between align-items-center text-muted small">
                   <span>
                     ${new Date(a.submitted_at).toLocaleDateString('ru')}
                     <span class="ms-3"><i class="fas fa-eye"></i> ${a.views || 0}</span>
                   </span>
-                  <a href="article.html?id=${a.id}" style="color: #A020F0; border-color: #A020F0;" class="btn btn-outline btn-sm">Читать полностью</a>
+                  <a href="article.html?id=${a.id}" class="btn btn-outline-purple btn-sm" 
+                     style="border-color: #A020F0; color: #A020F0;">
+                     Читать полностью
+                  </a>
                 </div>
               </div>
             </div>
@@ -210,6 +200,13 @@
     loadTags();
     loadArticles();
   </script>
+
+  <!-- Маленький фикс для кнопки "Читать полностью" -->
+  <style>
+    .btn-outline-purple:hover {
+      background: #A020F0 !important;
+      color: white !important;
+    }
+  </style>
 </body>
 </html>
-
