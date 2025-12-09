@@ -51,28 +51,25 @@
     }
 
     .form-control {
-  height: 58px;
-  border-radius: 20px;
-  background: #f8f9ff;
+      height: 58px;
+      border-radius: 20px;
+      background: #f8f9ff;
+      border: 1px solid #d1d5db;
+      padding: 0 1.5rem;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
 
-  border: 1px solid #d1d5db; /* <-- Лёгкая серая рамка */
-  padding: 0 1.5rem;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
-}
+    .form-control:focus {
+      background: #eef2ff;
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.20);
+    }
 
-.form-control:focus {
-  background: #eef2ff;
-  border-color: #a5b4fc;        /* чуть ярче, когда фокус */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.20);
-}
-
-    /* Контейнер */
     .input-wrapper {
       position: relative;
     }
 
-    /* Иконка глаза — чистая */
     .password-eye {
       position: absolute;
       right: 16px;
@@ -82,15 +79,14 @@
       color: #94a3b8;
       cursor: pointer;
       transition: 0.25s ease;
-      user-select: none;
     }
+
     .password-eye:hover {
       color: var(--primary);
     }
 
-    /* Чтобы текст не упирался */
     .form-control {
-      padding-right: 3.2rem !important;
+      padding-right: 3.8rem !important;
     }
 
     .btn-login {
@@ -181,36 +177,32 @@
 
     let isLogin = true;
 
-    // Включатель глазика
-    function toggleEye(iconId, inputId) {
-      const input = document.getElementById(inputId);
-      const icon = document.getElementById(iconId);
-      const show = input.type === "password";
+    // Глазик
+    document.getElementById('togglePassword').onclick = () => {
+      const show = passwordInput.type === 'password';
+      passwordInput.type = show ? 'text' : 'password';
+      document.getElementById('togglePassword').classList.toggle('fa-eye', !show);
+      document.getElementById('togglePassword').classList.toggle('fa-eye-slash', show);
+    };
 
-      input.type = show ? "text" : "password";
-      icon.classList.toggle("fa-eye", !show);
-      icon.classList.toggle("fa-eye-slash", show);
+    const tc = document.getElementById('toggleConfirm');
+    if (tc) {
+      tc.onclick = () => {
+        const show = confirmInput.type === 'password';
+        confirmInput.type = show ? 'text' : 'password';
+        tc.classList.toggle('fa-eye', !show);
+        tc.classList.toggle('fa-eye-slash', show);
+      };
     }
 
-    document.getElementById("togglePassword").onclick = () =>
-      toggleEye("togglePassword", "password");
-
-    const tc = document.getElementById("toggleConfirm");
-    if (tc) tc.onclick = () => toggleEye("toggleConfirm", "confirmPassword");
-
     function updateMode() {
-      if (isLogin) {
-        formTitle.textContent = 'Вход в систему';
-        submitBtn.textContent = 'Войти';
-        toggleBtn.innerHTML = 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>';
-        confirmGroup.classList.add('d-none');
-        forgotSection.classList.add('d-none');
-      } else {
-        formTitle.textContent = 'Создание аккаунта';
-        submitBtn.textContent = 'Зарегистрироваться';
-        toggleBtn.innerHTML = 'Уже есть аккаунт? <strong>Войти</strong>';
-        confirmGroup.classList.remove('d-none');
-      }
+      formTitle.textContent = isLogin ? 'Вход в систему' : 'Создание аккаунта';
+      submitBtn.textContent = isLogin ? 'Войти' : 'Зарегистрироваться';
+      toggleBtn.innerHTML = isLogin 
+        ? 'Нет аккаунта? <strong>Зарегистрируйтесь</strong>'
+        : 'Уже есть аккаунт? <strong>Войти</strong>';
+      isLogin ? confirmGroup.classList.add('d-none') : confirmGroup.classList.remove('d-none');
+      isLogin ? forgotSection.classList.add('d-none') : null;
     }
     updateMode();
 
@@ -220,28 +212,36 @@
       authForm.reset();
     };
 
-    // УМНЫЙ РЕДИРЕКТ ПО РОЛИ И ИМЕНИ
+    // УМНЫЙ И БЕЗОПАСНЫЙ РЕДИРЕКТ
     async function smartRedirect() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return location.href = 'login.html';
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('full_name, role')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();  // ← не падает с 406
 
-      // Если имени нет — на заполнение профиля
-      if (!profile?.full_name?.trim()) {
+      // Если профиля нет — создаём пустой
+      if (!profile || error?.code === 'PGRST116') {
+        await supabase
+          .from('profiles')
+          .upsert({ id: session.user.id, email: session.user.email }, { onConflict: 'id' });
+        return location.replace('profile.html');
+      }
+
+      // Если имя не заполнено
+      if (!profile.full_name?.trim()) {
         return location.replace('profile.html');
       }
 
       // Редирект по роли
       const role = (profile.role || 'reader').toLowerCase();
-      if (role === 'admin') location.replace('admin.html');
-      else if (role === 'reviewer') location.replace('review.html');
-      else if (role === 'author') location.replace('dashboard.html');
-      else location.replace('index.html');
+      if (role === 'admin') return location.replace('admin.html');
+      if (role === 'reviewer') return location.replace('review.html');
+      if (role === 'author') return location.replace('dashboard.html');
+      return location.replace('index.html');
     }
 
     authForm.onsubmit = async e => {
@@ -259,7 +259,8 @@
           ({ error } = await supabase.auth.signInWithPassword({ email, password }));
         } else {
           ({ error } = await supabase.auth.signUp({
-            email, password,
+            email,
+            password,
             options: { emailRedirectTo: location.origin + '/profile.html' }
           }));
           if (!error) {
@@ -267,10 +268,9 @@
             return;
           }
         }
-
         if (error) throw error;
 
-        // Успешно — умный редирект
+        // Успешно → редиректим
         await smartRedirect();
 
       } catch (err) {
@@ -283,6 +283,7 @@
       }
     };
 
+    // Сброс пароля
     document.getElementById('forgotPassword')?.addEventListener('click', async e => {
       e.preventDefault();
       const email = prompt('Введите email:');
@@ -290,14 +291,13 @@
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: location.origin + '/reset-password.html'
       });
-      alert(error ? 'Ошибка' : 'Письмо отправлено!');
+      alert(error ? 'Ошибка: ' + error.message : 'Письмо отправлено!');
     });
 
-    // Если уже залогинен — сразу редирект
+    // Если уже залогинен — сразу уходим куда надо
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) smartRedirect();
     });
   </script>
-
 </body>
 </html>
