@@ -90,7 +90,7 @@
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return window.location.href = 'login.html';
 
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
       if (!profile || profile.role !== 'reviewer') {
         alert('Доступ запрещён!');
         return window.location.href = 'dashboard.html';
@@ -144,4 +144,5 @@
   </script>
 </body>
 </html>
+
 
