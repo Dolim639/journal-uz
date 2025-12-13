@@ -87,7 +87,7 @@
         .from('profiles')
         .select('full_name')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile?.full_name?.trim()) {
         location.replace('profile.html');
@@ -210,3 +210,4 @@
   </style>
 </body>
 </html>
+
