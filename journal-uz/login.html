@@ -286,12 +286,31 @@
     // Сброс пароля
     document.getElementById('forgotPassword')?.addEventListener('click', async e => {
       e.preventDefault();
-      const email = prompt('Введите email:');
+      const email = document.getElementById('email').value.trim() || prompt('Введите email для сброса пароля:');
       if (!email) return;
+      
+      // Валидация email
+      if (!email.includes('@') || !email.includes('.')) {
+        return alert('Введите корректный email адрес');
+      }
+
+      const btn = document.getElementById('forgotPassword');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Отправка...';
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: location.origin + '/reset-password.html'
+        redirectTo: `${location.origin}/reset-password.html`
       });
-      alert(error ? 'Ошибка: ' + error.message : 'Письмо отправлено!');
+
+      btn.disabled = false;
+      btn.textContent = originalText;
+
+      if (error) {
+        alert('Ошибка: ' + error.message);
+      } else {
+        alert('Письмо с инструкциями по сбросу пароля отправлено на ' + email + '\n\nПроверьте почту и перейдите по ссылке в письме.');
+      }
     });
 
     // Если уже залогинен — сразу уходим куда надо
