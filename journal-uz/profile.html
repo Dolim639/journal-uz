@@ -87,7 +87,7 @@
       .from('profiles')
       .select('full_name')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     // Если имя уже есть — сразу на главную
     if (profile?.full_name && profile.full_name.trim() !== '') {
@@ -137,4 +137,5 @@
   </script>
 </body>
 </html>
+
 
