@@ -258,19 +258,27 @@
         if (isLogin) {
           ({ error } = await supabase.auth.signInWithPassword({ email, password }));
         } else {
-          ({ error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { 
-              emailRedirectTo: `${location.origin}/confirm-email.html`
+          // Сохраняем пароль во временное хранилище для установки после подтверждения
+          sessionStorage.setItem('pending_password', password);
+          sessionStorage.setItem('pending_email', email);
+          
+          // Отправляем OTP код для регистрации
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email: email,
+            options: {
+              shouldCreateUser: true // Создать пользователя при первом входе
             }
-          }));
-          if (!error) {
-            alert('Регистрация успешна!\n\nПроверьте почту — мы отправили письмо с подтверждением.\n\nПосле подтверждения email вернитесь на эту страницу и войдите в систему.');
-            // Очищаем форму
-            authForm.reset();
-            return;
+          });
+
+          if (otpError) {
+            sessionStorage.removeItem('pending_password');
+            sessionStorage.removeItem('pending_email');
+            throw otpError;
           }
+
+          // Редиректим на страницу подтверждения с email
+          location.href = `confirm-email.html?email=${encodeURIComponent(email)}`;
+          return;
         }
         if (error) throw error;
 
