@@ -317,6 +317,62 @@
       }
     });
 
+    // Проверка подтверждения email (для обновления страницы после подтверждения)
+    async function checkEmailConfirmation() {
+      const emailConfirmed = localStorage.getItem('email_confirmed');
+      const confirmedTime = localStorage.getItem('email_confirmed_time');
+      
+      if (emailConfirmed === 'true' && confirmedTime) {
+        const timeDiff = Date.now() - parseInt(confirmedTime);
+        // Проверяем, что подтверждение было недавно (в течение 5 минут)
+        if (timeDiff < 5 * 60 * 1000) {
+          // Очищаем флаг
+          localStorage.removeItem('email_confirmed');
+          localStorage.removeItem('email_confirmed_time');
+          
+          // Проверяем сессию и перенаправляем
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session && session.user) {
+            // Показываем сообщение
+            alert('Ссылка подтверждена! Перенаправляем в профиль...');
+            location.href = 'profile.html';
+          } else {
+            // Если сессии нет, просим войти
+            alert('Ссылка подтверждена! Теперь войдите в систему.');
+          }
+        } else {
+          // Время истекло - очищаем
+          localStorage.removeItem('email_confirmed');
+          localStorage.removeItem('email_confirmed_time');
+        }
+      }
+    }
+
+    // Проверяем при загрузке страницы
+    checkEmailConfirmation();
+
+    // Периодически проверяем (каждые 2 секунды), если пользователь вернулся на вкладку
+    setInterval(() => {
+      if (document.hasFocus()) {
+        checkEmailConfirmation();
+      }
+    }, 2000);
+
+    // Слушаем сообщения от окна подтверждения
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'email_confirmed') {
+        // Email подтверждён в другом окне
+        localStorage.setItem('email_confirmed', 'true');
+        localStorage.setItem('email_confirmed_time', Date.now().toString());
+        checkEmailConfirmation();
+      }
+    });
+
+    // Также слушаем события фокуса окна
+    window.addEventListener('focus', () => {
+      checkEmailConfirmation();
+    });
+
     // Если уже залогинен — сразу уходим куда надо
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) smartRedirect();
