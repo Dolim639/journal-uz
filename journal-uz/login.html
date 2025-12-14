@@ -261,10 +261,14 @@
           ({ error } = await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: location.origin + '/profile.html' }
+            options: { 
+              emailRedirectTo: `${location.origin}/confirm-email.html`
+            }
           }));
           if (!error) {
-            alert('Проверьте почту — отправлено письмо с подтверждением!');
+            alert('Регистрация успешна!\n\nПроверьте почту — мы отправили письмо с подтверждением.\n\nПосле подтверждения email вернитесь на эту страницу и войдите в систему.');
+            // Очищаем форму
+            authForm.reset();
             return;
           }
         }
