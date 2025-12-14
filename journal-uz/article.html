@@ -52,6 +52,55 @@
             </div>
           </div>
         </div>
+
+        <!-- Секция комментариев -->
+        <div class="card shadow-lg border-0 mt-4">
+          <div class="card-body p-5">
+            <h3 class="fw-bold mb-4">
+              <i class="fas fa-comments me-2 text-primary"></i>
+              Комментарии
+              <span class="badge bg-primary ms-2" id="commentsCount">0</span>
+            </h3>
+
+            <!-- Форма добавления комментария -->
+            <div id="commentFormSection" class="mb-4">
+              <form id="commentForm">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Оставить комментарий</label>
+                  <textarea 
+                    id="commentText" 
+                    class="form-control" 
+                    rows="4" 
+                    placeholder="Напишите ваш комментарий..."
+                    required
+                    maxlength="2000"></textarea>
+                  <small class="text-muted">
+                    <span id="charCount">0</span> / 2000 символов
+                  </small>
+                </div>
+                <button type="submit" class="btn btn-primary" id="submitCommentBtn">
+                  <i class="fas fa-paper-plane me-2"></i>
+                  Отправить комментарий
+                </button>
+              </form>
+            </div>
+
+            <!-- Список комментариев -->
+            <div id="commentsList" class="mt-4">
+              <div class="text-center text-muted py-4" id="noComments">
+                <i class="fas fa-comment-slash fa-3x mb-3 opacity-50"></i>
+                <p>Пока нет комментариев. Будьте первым!</p>
+              </div>
+            </div>
+
+            <!-- Загрузка комментариев -->
+            <div id="commentsLoading" class="text-center py-3 d-none">
+              <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -85,7 +134,7 @@
         .select('id, title, authors, abstract, file_url, views, submitted_at, article_id')  // Добавили article_id
         .eq('id', articleId)
         .eq('status', 'Опубликована')
-        .single();
+        .maybeSingle();
 
       if (error || !article) {
         document.getElementById('loading').classList.add('d-none');
@@ -122,6 +171,239 @@
       // Показываем контент
       document.getElementById('loading').classList.add('d-none');
       document.getElementById('articleContent').classList.remove('d-none');
+
+      // Загружаем комментарии
+      loadComments(articleId);
+      setupCommentForm(articleId);
+    }
+
+    // Загрузка комментариев
+    async function loadComments(submissionId) {
+      const commentsList = document.getElementById('commentsList');
+      const noComments = document.getElementById('noComments');
+      const commentsLoading = document.getElementById('commentsLoading');
+      const commentsCount = document.getElementById('commentsCount');
+
+      commentsLoading.classList.remove('d-none');
+      commentsList.innerHTML = '';
+
+      try {
+        // Загружаем комментарии
+        const { data: comments, error } = await supabase
+          .from('comments')
+          .select('id, text, created_at, user_id')
+          .eq('submission_id', submissionId)
+          .order('created_at', { ascending: false });
+
+        commentsLoading.classList.add('d-none');
+
+        if (error) {
+          console.error('Ошибка загрузки комментариев:', error);
+          commentsList.innerHTML = '<p class="text-danger">Ошибка загрузки комментариев</p>';
+          return;
+        }
+
+        if (!comments || comments.length === 0) {
+          noComments.classList.remove('d-none');
+          commentsCount.textContent = '0';
+          return;
+        }
+
+        noComments.classList.add('d-none');
+        commentsCount.textContent = comments.length;
+
+        // Загружаем имена пользователей
+        const userIds = [...new Set(comments.map(c => c.user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds);
+
+        const profilesMap = {};
+        profiles?.forEach(p => {
+          profilesMap[p.id] = p.full_name;
+        });
+
+        // Отображаем комментарии
+        commentsList.innerHTML = comments.map(comment => {
+          // Получаем имя пользователя
+          const userName = profilesMap[comment.user_id] || 'Анонимный пользователь';
+          
+          const commentDate = new Date(comment.created_at).toLocaleString('ru', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          // Если текст длинный, сворачиваем его
+          const text = comment.text;
+          const isLong = text.length > 300;
+          const shortText = isLong ? text.substring(0, 300) + '...' : text;
+          const commentId = comment.id;
+
+          return `
+            <div class="card mb-3 border-0 shadow-sm" data-comment-id="${commentId}">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <strong class="text-primary">${escapeHtml(userName)}</strong>
+                    <small class="text-muted ms-2">
+                      <i class="fas fa-clock me-1"></i>${commentDate}
+                    </small>
+                  </div>
+                </div>
+                <p class="mb-0" id="comment-text-${commentId}">${escapeHtml(shortText)}</p>
+                ${isLong ? `
+                  <button class="btn btn-link btn-sm p-0 mt-2 text-primary" onclick="toggleCommentText('${commentId}')">
+                    <i class="fas fa-chevron-down me-1"></i>Показать полностью
+                  </button>
+                  <div id="comment-full-${commentId}" class="d-none">${escapeHtml(text)}</div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Ошибка:', error);
+        commentsLoading.classList.add('d-none');
+        commentsList.innerHTML = '<p class="text-danger">Ошибка загрузки комментариев</p>';
+      }
+    }
+
+    // Функция для сворачивания/разворачивания длинных комментариев
+    window.toggleCommentText = function(commentId) {
+      const shortDiv = document.getElementById(`comment-text-${commentId}`);
+      const fullDiv = document.getElementById(`comment-full-${commentId}`);
+      const toggleBtn = shortDiv?.nextElementSibling;
+
+      if (!fullDiv || !toggleBtn) return;
+
+      if (fullDiv.classList.contains('d-none')) {
+        fullDiv.classList.remove('d-none');
+        shortDiv.classList.add('d-none');
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Свернуть';
+      } else {
+        fullDiv.classList.add('d-none');
+        shortDiv.classList.remove('d-none');
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Показать полностью';
+      }
+    };
+
+    // Настройка формы комментария
+    function setupCommentForm(submissionId) {
+      const commentForm = document.getElementById('commentForm');
+      const commentText = document.getElementById('commentText');
+      const submitBtn = document.getElementById('submitCommentBtn');
+      const charCount = document.getElementById('charCount');
+      const commentFormSection = document.getElementById('commentFormSection');
+
+      // Счётчик символов
+      commentText.addEventListener('input', () => {
+        charCount.textContent = commentText.value.length;
+      });
+
+      // Проверка авторизации
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          // Если не авторизован, показываем сообщение
+          commentFormSection.innerHTML = `
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Войдите в систему</strong>, чтобы оставить комментарий.
+              <a href="login.html" class="btn btn-primary btn-sm ms-2">Войти</a>
+            </div>
+          `;
+          return;
+        }
+      });
+
+      // Отправка комментария
+      commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const text = commentText.value.trim();
+
+        if (!text) {
+          alert('Введите текст комментария');
+          return;
+        }
+
+        // Проверяем авторизацию
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          location.href = 'login.html';
+          return;
+        }
+
+        // Получаем профиль пользователя
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.full_name) {
+          alert('Пожалуйста, заполните ваш профиль перед комментированием');
+          location.href = 'profile.html';
+          return;
+        }
+
+        // Показываем загрузку
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
+
+        try {
+          const { error } = await supabase
+            .from('comments')
+            .insert({
+              submission_id: submissionId,
+              user_id: session.user.id,
+              text: text
+            });
+
+          if (error) {
+            throw error;
+          }
+
+          // Очищаем форму
+          commentText.value = '';
+          charCount.textContent = '0';
+
+          // Перезагружаем комментарии
+          await loadComments(submissionId);
+
+          // Показываем сообщение об успехе
+          const successAlert = document.createElement('div');
+          successAlert.className = 'alert alert-success alert-dismissible fade show';
+          successAlert.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            Комментарий успешно добавлен!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          commentFormSection.insertBefore(successAlert, commentForm);
+
+          // Убираем сообщение через 3 секунды
+          setTimeout(() => {
+            successAlert.remove();
+          }, 3000);
+
+        } catch (error) {
+          console.error('Ошибка отправки комментария:', error);
+          alert('Ошибка: ' + error.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Отправить комментарий';
+        }
+      });
+    }
+
+    // Функция для экранирования HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     loadArticle();
