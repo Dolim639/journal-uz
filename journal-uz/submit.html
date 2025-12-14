@@ -139,7 +139,7 @@
             ${groups[cat].map(t => `
               <div class="col">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" value="${t.id}" id="tag-${t.id}" ${selectedTagIds.includes(t.id) ? 'checked' : ''}>
+                  <input class="form-check-input tag-checkbox" type="checkbox" value="${t.id}" id="tag-${t.id}" ${selectedTagIds.includes(t.id) ? 'checked' : ''}>
                   <label class="form-check-label" for="tag-${t.id}">${t.name}</label>
                 </div>
               </div>
@@ -148,29 +148,45 @@
         </div>
       `).join('');
 
-      document.getElementById('tagsModalBody').innerHTML = html;
+      const modalBody = document.getElementById('tagsModalBody');
+      modalBody.innerHTML = html;
 
-      // Обработчик чекбоксов
-      document.getElementById('tagsModalBody').addEventListener('change', (e) => {
-        const cb = e.target;
-        if (!cb.matches('input[type="checkbox"]')) return;
+      // Удаляем старые обработчики (если есть) и добавляем новый
+      const newModalBody = modalBody.cloneNode(true);
+      modalBody.parentNode.replaceChild(newModalBody, modalBody);
 
-        const id = cb.value;
-        if (cb.checked && selectedTagIds.length >= 5) {
-          cb.checked = false;
+      // Добавляем обработчик на все чекбоксы
+      newModalBody.querySelectorAll('.tag-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', handleTagCheckboxChange);
+      });
+
+      // Обновляем счётчик
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
+    }
+
+    // Обработчик изменения чекбокса тега
+    function handleTagCheckboxChange(e) {
+      const checkbox = e.target;
+      const tagId = checkbox.value;
+
+      if (checkbox.checked) {
+        // Добавляем тег, если не превышен лимит
+        if (selectedTagIds.length >= 5) {
+          checkbox.checked = false;
           alert('Максимум 5 тегов!');
           return;
         }
-
-        if (cb.checked) {
-          selectedTagIds.push(id);
-        } else {
-          selectedTagIds = selectedTagIds.filter(x => x !== id);
+        if (!selectedTagIds.includes(tagId)) {
+          selectedTagIds.push(tagId);
         }
+      } else {
+        // Удаляем тег из массива
+        selectedTagIds = selectedTagIds.filter(id => id !== tagId);
+      }
 
-        document.getElementById('selectedCount').textContent = selectedTagIds.length;
-        updateSelectedTagsDisplay();
-      });
+      // Обновляем счётчик и отображение
+      document.getElementById('selectedCount').textContent = selectedTagIds.length;
+      updateSelectedTagsDisplay();
     }
 
     // Обновляем отображение выбранных тегов — теперь всегда правильные названия!
@@ -189,7 +205,12 @@
 
     // Загрузка статьи при редактировании
     async function loadForEdit(id) {
-      const { data: article } = await supabase.from('submissions').select('*').eq('id', id).single();
+      const { data: article } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle();
+      if (!article) {
+        alert('Статья не найдена');
+        location.href = 'dashboard.html';
+        return;
+      }
       const { data: links } = await supabase.from('submission_tags').select('tag_id').eq('submission_id', id);
 
       document.getElementById('title').value = article.title;
@@ -220,6 +241,11 @@
 
     // Открытие модалки — теги загружаются и работают
     document.getElementById('tagsModal').addEventListener('shown.bs.modal', renderTagsModal);
+    
+    // При закрытии модалки обновляем отображение выбранных тегов
+    document.getElementById('tagsModal').addEventListener('hidden.bs.modal', () => {
+      updateSelectedTagsDisplay();
+    });
 
     // Отправка формы
     document.getElementById('submitForm').addEventListener('submit', async (e) => {
@@ -248,9 +274,23 @@
         if (isEditMode) {
           const updates = { title, authors, abstract };
           if (fileUrl) updates.file_url = fileUrl;
+          
+          // Обновляем статью
           await supabase.from('submissions').update(updates).eq('id', currentArticleId);
+          
+          // Полностью пересоздаём связи тегов: удаляем все старые и добавляем новые
           await supabase.from('submission_tags').delete().eq('submission_id', currentArticleId);
-          await supabase.from('submission_tags').insert(selectedTagIds.map(id => ({ submission_id: currentArticleId, tag_id: id })));
+          
+          // Добавляем только выбранные теги (если есть)
+          if (selectedTagIds.length > 0) {
+            await supabase.from('submission_tags').insert(
+              selectedTagIds.map(id => ({ 
+                submission_id: currentArticleId, 
+                tag_id: id 
+              }))
+            );
+          }
+          
           alert('Статья успешно обновлена!');
         } else {
           const fileName = `${Date.now()}_${file.name}`;
