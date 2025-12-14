@@ -149,12 +149,12 @@
           <h3 class="text-center fw-bold mb-3">Email успешно подтверждён!</h3>
           
           <p class="text-center text-muted mb-4">
-            Ваш аккаунт активирован. Теперь вы можете войти в систему.
+            Ваш аккаунт активирован. Страница регистрации обновится автоматически.
           </p>
 
-          <div class="alert alert-info mb-4">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Важно:</strong> Вернитесь на предыдущую вкладку, где вы регистрировались, чтобы продолжить работу.
+          <div class="alert alert-success mb-4">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Ссылка подтверждена!</strong> Вернитесь на предыдущую вкладку — вас автоматически перенаправит в профиль.
           </div>
 
           <div class="mb-4">
@@ -251,6 +251,9 @@
       document.getElementById('errorSection').classList.add('d-none');
 
       try {
+        let userConfirmed = false;
+        let userId = null;
+
         // Если есть токены в URL (новый формат Supabase)
         if (type === 'signup' && accessToken && refreshToken) {
           // Устанавливаем сессию из токенов
@@ -259,19 +262,28 @@
             refresh_token: refreshToken
           });
 
-          if (sessionError || !data.session) {
-            throw new Error('Не удалось установить сессию. Ссылка может быть недействительной.');
-          }
+          // Если токены недействительны, но email уже подтверждён - это нормально
+          if (sessionError) {
+            // Проверяем, может быть email уже подтверждён
+            const { data: { session: existingSession } } = await supabase.auth.getSession();
+            if (existingSession && existingSession.user && existingSession.user.email_confirmed_at) {
+              userConfirmed = true;
+              userId = existingSession.user.id;
+            } else {
+              // Пробуем проверить через вход (может быть пользователь уже подтвердил)
+              throw new Error('Ссылка уже использована или недействительна. Попробуйте войти в систему.');
+            }
+          } else if (data && data.session && data.session.user) {
+            userConfirmed = true;
+            userId = data.session.user.id;
 
-          // Создаём профиль, если его ещё нет
-          const { data: { user } } = data.session;
-          if (user) {
+            // Создаём профиль, если его ещё нет
             const { error: profileError } = await supabase
               .from('profiles')
               .upsert(
                 { 
-                  id: user.id, 
-                  email: user.email 
+                  id: userId, 
+                  email: data.session.user.email 
                 },
                 { onConflict: 'id' }
               );
@@ -280,9 +292,6 @@
               console.error('Ошибка создания профиля:', profileError);
             }
           }
-
-          // Показываем успех
-          showSuccess();
         }
         // Если есть старый формат токена
         else if (token) {
@@ -291,10 +300,20 @@
             type: 'signup'
           });
 
-          if (error) throw error;
+          if (error) {
+            // Проверяем, может быть email уже подтверждён
+            const { data: { session: existingSession } } = await supabase.auth.getSession();
+            if (existingSession && existingSession.user && existingSession.user.email_confirmed_at) {
+              userConfirmed = true;
+              userId = existingSession.user.id;
+            } else {
+              throw error;
+            }
+          } else if (data && data.user) {
+            userConfirmed = true;
+            userId = data.user.id;
 
-          // Создаём профиль, если его ещё нет
-          if (data.user) {
+            // Создаём профиль, если его ещё нет
             await supabase
               .from('profiles')
               .upsert(
@@ -305,22 +324,48 @@
                 { onConflict: 'id' }
               );
           }
-
-          showSuccess();
         }
         // Если нет токенов, проверяем активную сессию
         else {
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session && session.user && session.user.email_confirmed_at) {
-            showSuccess();
+            userConfirmed = true;
+            userId = session.user.id;
           } else {
             throw new Error('Ссылка подтверждения недействительна или просрочена.');
           }
         }
+
+        if (userConfirmed) {
+          // Сохраняем флаг подтверждения для обновления старого окна
+          localStorage.setItem('email_confirmed', 'true');
+          localStorage.setItem('email_confirmed_time', Date.now().toString());
+          
+          // Показываем успех
+          showSuccess();
+          
+          // Пытаемся обновить старое окно через postMessage (если открыто)
+          try {
+            window.opener?.postMessage({ type: 'email_confirmed', userId: userId }, '*');
+          } catch (e) {
+            console.log('Не удалось отправить сообщение в родительское окно');
+          }
+        } else {
+          throw new Error('Не удалось подтвердить email.');
+        }
       } catch (error) {
         console.error('Ошибка подтверждения email:', error);
-        showError(error.message || 'Не удалось подтвердить email. Пожалуйста, запросите новое письмо.');
+        // Если ошибка связана с тем, что ссылка уже использована, но email подтверждён
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user && session.user.email_confirmed_at) {
+          // Email уже подтверждён - показываем успех
+          localStorage.setItem('email_confirmed', 'true');
+          localStorage.setItem('email_confirmed_time', Date.now().toString());
+          showSuccess();
+        } else {
+          showError(error.message || 'Не удалось подтвердить email. Пожалуйста, запросите новое письмо.');
+        }
       }
     }
 
