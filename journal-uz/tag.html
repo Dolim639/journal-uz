@@ -11,12 +11,19 @@
 </head>
 <body class="index-page">
 
-  <!-- Hero -->
-  <section class="text-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <div class="container py-5">
-      <h1 class="display-4 fw-bold text-white mb-0">Scienta</h1>
+  <!-- Шапка -->
+  <header class="py-4 shadow-lg" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <h1 class="display-5 fw-bold mb-0 text-white" style="text-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+          Scienta UZ
+        </h1>
+        <div id="authSection" class="text-white fs-5">
+          <a href="login.html" class="btn btn-outline-light">Вход</a>
+        </div>
+      </div>
     </div>
-  </section>
+  </header>
 
   <div class="container my-5">
     <div class="d-flex align-items-center mb-4">
@@ -41,6 +48,40 @@
     import { supabaseUrl, supabaseKey } from './supabase-config.js';
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Проверка авторизации и отображение профиля
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        document.getElementById('authSection').innerHTML = `
+          <div class="dropdown">
+            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              ${profile?.full_name || session.user.email}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="profile.html">Профиль</a></li>
+              <li><a class="dropdown-item" href="dashboard.html">Мои статьи</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="#" id="logoutBtn">Выйти</a></li>
+            </ul>
+          </div>
+        `;
+
+        document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+          e.preventDefault();
+          await supabase.auth.signOut();
+          location.reload();
+        });
+      }
+    }
+
+    checkAuth();
 
     // Правильно получаем и декодируем тег
     const urlParams = new URLSearchParams(window.location.search);
@@ -72,7 +113,7 @@
         .from('tags')
         .select('id')
         .ilike('name', `%${tagName}%`)  // Теперь найдёт "Квантовая физика", "квантовая", "Физика" и т.д.
-        .single();
+        .maybeSingle();
 
       if (tagError || !tagData) {
         console.error('Тег не найден:', tagError);
