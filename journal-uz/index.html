@@ -11,7 +11,7 @@
 <body>
 
   <!-- Шапка -->
-  <header class="py-4 shadow-lg" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+  <header class="py-4 shadow-lg" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);">
     <div class="container">
       <div class="d-flex justify-content-between align-items-center">
         <h1 class="display-5 fw-bold mb-0 text-white" style="text-shadow: 0 4px 12px rgba(0,0,0,0.4);">
@@ -169,7 +169,7 @@
             <div class="card border-0 shadow-lg" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-radius: 20px;">
               <div class="card-body p-4">
                 <h5 class="card-title fw-bold mb-3">
-                  <a href="article.html?id=${a.id}" style="color: #A020F0; text-decoration: none;">
+                  <a href="article.html?id=${a.id}" style="color: #0ea5e9; text-decoration: none;">
                     ${a.title}
                   </a>
                 </h5>
@@ -183,8 +183,8 @@
                     ${new Date(a.submitted_at).toLocaleDateString('ru')}
                     <span class="ms-3"><i class="fas fa-eye"></i> ${a.views || 0}</span>
                   </span>
-                  <a href="article.html?id=${a.id}" class="btn btn-outline-purple btn-sm" 
-                     style="border-color: #A020F0; color: #A020F0;">
+                  <a href="article.html?id=${a.id}" class="btn btn-outline-cyan btn-sm" 
+                     style="border-color: #0ea5e9; color: #0ea5e9;">
                      Читать полностью
                   </a>
                 </div>
@@ -203,11 +203,10 @@
 
   <!-- Маленький фикс для кнопки "Читать полностью" -->
   <style>
-    .btn-outline-purple:hover {
-      background: #A020F0 !important;
+    .btn-outline-cyan:hover {
+      background: #0ea5e9 !important;
       color: white !important;
     }
   </style>
 </body>
 </html>
-
