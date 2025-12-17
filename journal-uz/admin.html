@@ -62,16 +62,42 @@
     <!-- Вкладки — фиолетовые, белый текст -->
     <div class="text-center mb-5">
       <div class="btn-group btn-group-lg" role="group">
-        <button type="button" class="btn tab-btn active" data-status="Подана">Поданные</button>
-        <button type="button" class="btn tab-btn" data-status="На рецензии">На рецензии</button>
-        <button type="button" class="btn tab-btn" data-status="Принята">Принятые</button>
-        <button type="button" class="btn tab-btn" data-status="Отклонена">Отклонённые</button>
-        <button type="button" class="btn tab-btn" data-status="Опубликована">Опубликованные</button>
+        <button type="button" class="btn tab-btn active" data-tab="submissions" data-status="Подана">Поданные</button>
+        <button type="button" class="btn tab-btn" data-tab="submissions" data-status="На рецензии">На рецензии</button>
+        <button type="button" class="btn tab-btn" data-tab="submissions" data-status="Принята">Принятые</button>
+        <button type="button" class="btn tab-btn" data-tab="submissions" data-status="Отклонена">Отклонённые</button>
+        <button type="button" class="btn tab-btn" data-tab="submissions" data-status="Опубликована">Опубликованные</button>
+        <button type="button" class="btn tab-btn" data-tab="comments">
+          <i class="fas fa-comments me-2"></i>Комментарии
+        </button>
       </div>
     </div>
 
     <!-- Список статей -->
-    <div id="adminList" class="row g-4"></div>
+    <div id="submissionsSection">
+      <div id="adminList" class="row g-4"></div>
+    </div>
+
+    <!-- Секция комментариев -->
+    <div id="commentsSection" class="d-none">
+      <div class="row">
+        <div class="col-12">
+          <div class="card border-0 shadow-lg mb-4">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                  <i class="fas fa-comments me-2 text-primary"></i>
+                  Все комментарии
+                </h4>
+                <span class="badge bg-primary fs-5" id="totalComments">0</span>
+              </div>
+              <p class="text-muted mb-0">Просматривайте и управляйте комментариями к статьям</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="commentsList" class="row g-4"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -80,6 +106,7 @@
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     let currentStatus = 'Подана';
+    let currentTab = 'submissions';
 
     // Глобальные функции
     window.updateStatus = async (id, newStatus) => {
@@ -202,12 +229,27 @@
     }
 
     // Вкладки
-    document.querySelectorAll('[data-status]').forEach(btn => {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        currentStatus = btn.dataset.status;
-        loadArticles();
+        
+        const tab = btn.dataset.tab;
+        
+        if (tab === 'comments') {
+          // Показываем секцию комментариев
+          document.getElementById('submissionsSection').classList.add('d-none');
+          document.getElementById('commentsSection').classList.remove('d-none');
+          currentTab = 'comments';
+          loadComments();
+        } else {
+          // Показываем секцию статей
+          document.getElementById('submissionsSection').classList.remove('d-none');
+          document.getElementById('commentsSection').classList.add('d-none');
+          currentTab = 'submissions';
+          currentStatus = btn.dataset.status;
+          loadArticles();
+        }
       });
     });
 
@@ -215,7 +257,7 @@
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) location.href = 'login.html';
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
     if (!profile || profile.role !== 'admin') {
       alert('Доступ запрещён!');
       location.href = 'index.html';
@@ -225,6 +267,174 @@
       await supabase.auth.signOut();
       location.href = 'login.html';
     };
+
+    // Загрузка комментариев
+    async function loadComments() {
+      const commentsList = document.getElementById('commentsList');
+      const totalComments = document.getElementById('totalComments');
+      
+      commentsList.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-3">Загрузка комментариев...</p></div>';
+
+      try {
+        // Загружаем комментарии с информацией о статьях и пользователях
+        const { data: comments, error } = await supabase
+          .from('comments')
+          .select('id, text, created_at, user_id, submission_id')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!comments || comments.length === 0) {
+          commentsList.innerHTML = `
+            <div class="col-12 text-center py-5">
+              <i class="fas fa-comment-slash fa-4x text-muted mb-4"></i>
+              <h4 class="text-muted">Нет комментариев</h4>
+            </div>
+          `;
+          totalComments.textContent = '0';
+          return;
+        }
+
+        totalComments.textContent = comments.length;
+
+        // Загружаем дополнительные данные
+        const userIds = [...new Set(comments.map(c => c.user_id))];
+        const submissionIds = [...new Set(comments.map(c => c.submission_id))];
+
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds);
+
+        const { data: submissions } = await supabase
+          .from('submissions')
+          .select('id, title')
+          .in('id', submissionIds);
+
+        const profilesMap = {};
+        profiles?.forEach(p => {
+          profilesMap[p.id] = p.full_name;
+        });
+
+        const submissionsMap = {};
+        submissions?.forEach(s => {
+          submissionsMap[s.id] = s.title;
+        });
+
+        // Отображаем комментарии
+        commentsList.innerHTML = comments.map(comment => {
+          const userName = profilesMap[comment.user_id] || 'Неизвестный пользователь';
+          const articleTitle = submissionsMap[comment.submission_id] || 'Статья удалена';
+          const commentDate = new Date(comment.created_at).toLocaleString('ru', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          const isLong = comment.text.length > 200;
+          const displayText = isLong ? comment.text.substring(0, 200) + '...' : comment.text;
+
+          return `
+            <div class="col-12">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="flex-grow-1">
+                      <h5 class="card-title mb-2">
+                        <i class="fas fa-user-circle text-primary me-2"></i>
+                        ${escapeHtml(userName)}
+                      </h5>
+                      <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>${commentDate}
+                      </small>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteComment('${comment.id}', '${escapeHtml(userName)}')">
+                      <i class="fas fa-trash me-1"></i>Удалить
+                    </button>
+                  </div>
+
+                  <div class="mb-3">
+                    <small class="text-muted fw-semibold">Статья:</small><br>
+                    <a href="article.html?id=${comment.submission_id}" target="_blank" class="text-decoration-none">
+                      ${escapeHtml(articleTitle)}
+                      <i class="fas fa-external-link-alt ms-1 small"></i>
+                    </a>
+                  </div>
+
+                  <div class="border-start border-primary border-3 ps-3 py-2 bg-light rounded">
+                    <p class="mb-0" id="comment-text-${comment.id}">${escapeHtml(displayText)}</p>
+                    ${isLong ? `
+                      <button class="btn btn-link btn-sm p-0 mt-2 text-primary" onclick="toggleAdminCommentText('${comment.id}')">
+                        <i class="fas fa-chevron-down me-1"></i>Показать полностью
+                      </button>
+                      <p class="mb-0 d-none" id="comment-full-${comment.id}">${escapeHtml(comment.text)}</p>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Ошибка загрузки комментариев:', error);
+        commentsList.innerHTML = `
+          <div class="col-12 text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-4x text-danger mb-4"></i>
+            <h4 class="text-danger">Ошибка загрузки комментариев</h4>
+            <p class="text-muted">${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // Функция для сворачивания/разворачивания комментариев
+    window.toggleAdminCommentText = function(commentId) {
+      const shortDiv = document.getElementById(`comment-text-${commentId}`);
+      const fullDiv = document.getElementById(`comment-full-${commentId}`);
+      const toggleBtn = shortDiv?.nextElementSibling;
+
+      if (!fullDiv || !toggleBtn) return;
+
+      if (fullDiv.classList.contains('d-none')) {
+        fullDiv.classList.remove('d-none');
+        shortDiv.classList.add('d-none');
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Свернуть';
+      } else {
+        fullDiv.classList.add('d-none');
+        shortDiv.classList.remove('d-none');
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Показать полностью';
+      }
+    };
+
+    // Удаление комментария
+    window.deleteComment = async function(commentId, userName) {
+      if (!confirm(`Удалить комментарий пользователя "${userName}"?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from('comments')
+          .delete()
+          .eq('id', commentId);
+
+        if (error) throw error;
+
+        alert('Комментарий успешно удалён!');
+        loadComments();
+      } catch (error) {
+        console.error('Ошибка удаления комментария:', error);
+        alert('Ошибка: ' + error.message);
+      }
+    };
+
+    // Функция для экранирования HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
     // Загрузка по умолчанию
     loadArticles();
