@@ -108,9 +108,125 @@
       color: var(--primary);
       font-weight: 600;
     }
+
+    /* Уведомление (Toast) */
+    .toast-notification {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 1.25rem 1.75rem;
+      min-width: 320px;
+      max-width: 90%;
+      z-index: 10000;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-left: 4px solid var(--primary);
+    }
+
+    .toast-notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast-notification.error {
+      border-left-color: #ef4444;
+    }
+
+    .toast-notification.success {
+      border-left-color: #10b981;
+    }
+
+    .toast-notification.info {
+      border-left-color: var(--primary);
+    }
+
+    .toast-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .toast-notification.error .toast-icon {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    .toast-notification.success .toast-icon {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+
+    .toast-notification.info .toast-icon {
+      background: rgba(14, 165, 233, 0.1);
+      color: var(--primary);
+    }
+
+    .toast-content {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #1e293b;
+      margin: 0 0 0.25rem 0;
+    }
+
+    .toast-message {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toast-close:hover {
+      color: #64748b;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Уведомление -->
+  <div id="toastNotification" class="toast-notification">
+    <div class="toast-icon">
+      <i class="fas fa-exclamation-circle"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-title" id="toastTitle">Ошибка</div>
+      <div class="toast-message" id="toastMessage"></div>
+    </div>
+    <button class="toast-close" id="toastClose">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
 
   <div class="container">
     <div class="login-card">
@@ -177,6 +293,49 @@
 
     let isLogin = true;
 
+    // Функция показа уведомления
+    function showToast(message, type = 'error', title = null) {
+      const toast = document.getElementById('toastNotification');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = toast.querySelector('.toast-icon i');
+      
+      // Убираем старые классы типов
+      toast.classList.remove('error', 'success', 'info');
+      toast.classList.add(type);
+      
+      // Устанавливаем заголовок и сообщение
+      if (title) {
+        toastTitle.textContent = title;
+      } else {
+        toastTitle.textContent = type === 'error' ? 'Ошибка' : type === 'success' ? 'Успешно' : 'Информация';
+      }
+      toastMessage.textContent = message;
+      
+      // Меняем иконку в зависимости от типа
+      toastIcon.className = 'fas ' + (
+        type === 'error' ? 'fa-exclamation-circle' :
+        type === 'success' ? 'fa-check-circle' :
+        'fa-info-circle'
+      );
+      
+      // Показываем уведомление
+      toast.classList.add('show');
+      
+      // Автоматически скрываем через 4 секунды
+      setTimeout(() => {
+        hideToast();
+      }, 4000);
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('toastNotification');
+      toast.classList.remove('show');
+    }
+
+    // Закрытие по клику на крестик
+    document.getElementById('toastClose').addEventListener('click', hideToast);
+
     // Глазик
     document.getElementById('togglePassword').onclick = () => {
       const show = passwordInput.type === 'password';
@@ -204,12 +363,19 @@
       isLogin ? confirmGroup.classList.add('d-none') : confirmGroup.classList.remove('d-none');
       isLogin ? forgotSection.classList.add('d-none') : null;
     }
+
+    // Поддержка режима регистрации по хэшу URL (#register)
+    const initialHash = (location.hash || '').toLowerCase();
+    if (initialHash.includes('register')) {
+      isLogin = false;
+    }
     updateMode();
 
     toggleBtn.onclick = () => {
       isLogin = !isLogin;
       updateMode();
       authForm.reset();
+      location.hash = isLogin ? '#login' : '#register';
     };
 
     // УМНЫЙ И БЕЗОПАСНЫЙ РЕДИРЕКТ
@@ -250,7 +416,8 @@
       const password = passwordInput.value;
 
       if (!isLogin && password !== confirmInput.value) {
-        return alert('Пароли не совпадают!');
+        showToast('Пароли не совпадают!', 'error');
+        return;
       }
 
       try {
@@ -287,10 +454,10 @@
 
       } catch (err) {
         if (err.message.includes('Invalid login credentials')) {
-          alert('Неверный email или пароль');
+          showToast('Неверный email или пароль', 'error');
           forgotSection.classList.remove('d-none');
         } else {
-          alert('Ошибка: ' + err.message);
+          showToast(err.message, 'error');
         }
       }
     };
@@ -298,12 +465,18 @@
     // Сброс пароля
     document.getElementById('forgotPassword')?.addEventListener('click', async e => {
       e.preventDefault();
-      const email = document.getElementById('email').value.trim() || prompt('Введите email для сброса пароля:');
-      if (!email) return;
+      let email = document.getElementById('email').value.trim();
+      
+      if (!email) {
+        // Если email не введён, показываем уведомление с просьбой ввести
+        showToast('Введите email в поле выше', 'info', 'Требуется email');
+        return;
+      }
       
       // Валидация email
       if (!email.includes('@') || !email.includes('.')) {
-        return alert('Введите корректный email адрес');
+        showToast('Введите корректный email адрес', 'error');
+        return;
       }
 
       const btn = document.getElementById('forgotPassword');
@@ -319,9 +492,9 @@
       btn.textContent = originalText;
 
       if (error) {
-        alert('Ошибка: ' + error.message);
+        showToast(error.message, 'error');
       } else {
-        alert('Письмо с инструкциями по сбросу пароля отправлено на ' + email + '\n\nПроверьте почту и перейдите по ссылке в письме.');
+        showToast(`Письмо с инструкциями по сбросу пароля отправлено на ${email}. Проверьте почту и перейдите по ссылке в письме.`, 'success', 'Письмо отправлено');
       }
     });
 
@@ -342,11 +515,13 @@
           const { data: { session } } = await supabase.auth.getSession();
           if (session && session.user) {
             // Показываем сообщение
-            alert('Ссылка подтверждена! Перенаправляем в профиль...');
-            location.href = 'profile.html';
+            showToast('Ссылка подтверждена! Перенаправляем в профиль...', 'success', 'Успешно');
+            setTimeout(() => {
+              location.href = 'profile.html';
+            }, 1500);
           } else {
             // Если сессии нет, просим войти
-            alert('Ссылка подтверждена! Теперь войдите в систему.');
+            showToast('Ссылка подтверждена! Теперь войдите в систему.', 'success', 'Успешно');
           }
         } else {
           // Время истекло - очищаем
