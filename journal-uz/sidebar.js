@@ -14,14 +14,8 @@ function createSidebarShell() {
   aside.className = 'app-sidebar';
 
   aside.innerHTML = `
-    <div class="app-sidebar__header">
-      <a href="index.html" class="app-sidebar__brand">
-        <span class="app-sidebar__brand-mark">S</span>
-        <span class="app-sidebar__brand-text">Scienta</span>
-      </a>
-      <div class="app-sidebar__user" id="sidebarUser">
-        <span class="app-sidebar__user-name">Гость</span>
-      </div>
+    <div class="app-sidebar__user" id="sidebarUser">
+      <span class="app-sidebar__user-name">Гость</span>
     </div>
 
     <nav class="app-sidebar__nav" aria-label="Основная навигация">
@@ -49,7 +43,7 @@ function renderLinks(linksContainer, items) {
   `).join('');
 }
 
-function attachToggle(aside) {
+function attachToggle(aside, backdrop) {
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'btn btn-outline-light ms-2 app-sidebar-toggle';
@@ -60,6 +54,9 @@ function attachToggle(aside) {
   function handleToggleClick() {
     const isOpen = aside.classList.toggle('is-open');
     document.body.classList.toggle('sidebar-open', isOpen);
+    if (backdrop) {
+      backdrop.classList.toggle('is-visible', isOpen);
+    }
   }
 
   toggle.addEventListener('click', handleToggleClick);
@@ -89,7 +86,21 @@ async function initSidebar() {
   const aside = createSidebarShell();
   if (!aside) return;
 
-  attachToggle(aside);
+  let backdrop = document.querySelector('.app-sidebar-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'app-sidebar-backdrop';
+    document.body.appendChild(backdrop);
+  }
+
+  // Клик по фону закрывает сайдбар
+  backdrop.addEventListener('click', () => {
+    aside.classList.remove('is-open');
+    backdrop.classList.remove('is-visible');
+    document.body.classList.remove('sidebar-open');
+  });
+
+  attachToggle(aside, backdrop);
 
   const linksContainer = aside.querySelector('[data-sidebar-links]');
   const userEl = document.getElementById('sidebarUser');
