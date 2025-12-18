@@ -19,8 +19,27 @@
 
   <div class="container mt-5">
     <!-- Заголовок теперь белый -->
-    <h2 class="fw-bold mb-4 text-white" style="text-shadow: 0 3px 10px rgba(0,0,0,0.4);">Статьи на рецензию</h2>
-    <div id="reviewsList" class="row g-4"></div>
+    <h2 class="fw-bold mb-4 text-white" style="text-shadow: 0 3px 10px rgba(0,0,0,0.4);">Рецензирование статей</h2>
+
+    <!-- Вкладки -->
+    <ul class="nav nav-pills mb-4" id="reviewTabs">
+      <li class="nav-item">
+        <button class="nav-link active" id="tabPending" type="button">Статьи на рецензию</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="tabMyReviews" type="button">Мои отзывы</button>
+      </li>
+    </ul>
+
+    <!-- Секция статей, требующих рецензии -->
+    <div id="pendingSection">
+      <div id="reviewsList" class="row g-4"></div>
+    </div>
+
+    <!-- Секция уже оценённых статей этим рецензентом -->
+    <div id="myReviewsSection" class="d-none">
+      <div id="myReviewsList" class="row g-4"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -97,7 +116,38 @@
       }
 
       document.getElementById('logoutBtn').onclick = () => supabase.auth.signOut().then(() => location.href = 'login.html');
+
+      // Инициализация вкладок
+      setupTabs();
+
+      // По умолчанию загружаем статьи, требующие рецензии
       loadReviews();
+    }
+
+    // Переключение вкладок
+    function setupTabs() {
+      const tabPending = document.getElementById('tabPending');
+      const tabMyReviews = document.getElementById('tabMyReviews');
+      const pendingSection = document.getElementById('pendingSection');
+      const myReviewsSection = document.getElementById('myReviewsSection');
+
+      if (!tabPending || !tabMyReviews || !pendingSection || !myReviewsSection) return;
+
+      tabPending.addEventListener('click', () => {
+        tabPending.classList.add('active');
+        tabMyReviews.classList.remove('active');
+        pendingSection.classList.remove('d-none');
+        myReviewsSection.classList.add('d-none');
+        loadReviews();
+      });
+
+      tabMyReviews.addEventListener('click', () => {
+        tabMyReviews.classList.add('active');
+        tabPending.classList.remove('active');
+        pendingSection.classList.add('d-none');
+        myReviewsSection.classList.remove('d-none');
+        loadMyReviews();
+      });
     }
 
     async function loadReviews() {
@@ -138,6 +188,83 @@
           </div>
         </div>
       `).join('') || '<p class="text-center">Нет статей на рецензии</p>';
+    }
+
+    // Загрузка статей, которые уже были оценены этим рецензентом
+    async function loadMyReviews() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const reviewerId = session.user.id;
+
+      // Получаем все отзывы этого рецензента
+      const { data: reviews, error } = await supabase
+        .from('reviews')
+        .select('id, submission_id, review, score, created_at')
+        .eq('reviewer_id', reviewerId)
+        .order('created_at', { ascending: false });
+
+      const list = document.getElementById('myReviewsList');
+
+      if (error) {
+        console.error('Ошибка загрузки отзывов рецензента:', error);
+        list.innerHTML = '<p class="text-danger">Ошибка загрузки отзывов</p>';
+        return;
+      }
+
+      if (!reviews || reviews.length === 0) {
+        list.innerHTML = '<p class="text-center text-muted">Вы ещё не оставили ни одного отзыва.</p>';
+        return;
+      }
+
+      const submissionIds = [...new Set(reviews.map(r => r.submission_id))];
+
+      const { data: submissions } = await supabase
+        .from('submissions')
+        .select('id, title, authors, article_id, status')
+        .in('id', submissionIds);
+
+      const submissionsMap = {};
+      (submissions || []).forEach(s => {
+        submissionsMap[s.id] = s;
+      });
+
+      list.innerHTML = reviews.map(r => {
+        const s = submissionsMap[r.submission_id];
+        const title = s?.title || 'Статья (удалена или недоступна)';
+        const authors = s?.authors || '';
+        const articleId = s?.article_id || '—';
+        const status = s?.status || '—';
+
+        const reviewDate = new Date(r.created_at).toLocaleString('ru', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        return `
+          <div class="col-12">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5>${title}</h5>
+                ${authors ? `<p><strong>Авторы:</strong> ${authors}</p>` : ''}
+                <p>
+                  <strong>Номер статьи:</strong> ${articleId} |
+                  <strong>Статус:</strong> ${status} |
+                  <strong>Оценка:</strong> ${r.score} / 5
+                </p>
+                <p class="mb-2"><strong>Дата отзыва:</strong> ${reviewDate}</p>
+                <div class="p-3 bg-light rounded mb-2">
+                  ${r.review.replace(/\n/g, '<br>')}
+                </div>
+                ${s ? `<a href="article.html?id=${s.id}" class="btn btn-outline-primary btn-sm">Открыть статью</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     checkSession();
