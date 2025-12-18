@@ -32,7 +32,6 @@ function createSidebarShell() {
   `;
 
   document.body.appendChild(aside);
-  document.body.classList.add('has-sidebar');
 
   return aside;
 }
@@ -50,9 +49,47 @@ function renderLinks(linksContainer, items) {
   `).join('');
 }
 
+function attachToggle(aside) {
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'btn btn-outline-light ms-2 app-sidebar-toggle';
+  toggle.setAttribute('aria-label', 'Меню навигации');
+
+  toggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+
+  function handleToggleClick() {
+    const isOpen = aside.classList.toggle('is-open');
+    document.body.classList.toggle('sidebar-open', isOpen);
+  }
+
+  toggle.addEventListener('click', handleToggleClick);
+
+  // Пытаемся поставить кнопку после имени/выхода
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn && logoutBtn.closest('.container, header, nav, .admin-header')) {
+    logoutBtn.insertAdjacentElement('afterend', toggle);
+    return;
+  }
+
+  // Для главной: ставим в правую часть шапки после authSection
+  const headerRow = document.querySelector('header .d-flex.justify-content-between');
+  if (headerRow) {
+    headerRow.appendChild(toggle);
+    return;
+  }
+
+  // Фоллбек: просто в правую часть первого navbar/контейнера
+  const navbarRight = document.querySelector('.navbar .container, .navbar');
+  if (navbarRight) {
+    navbarRight.appendChild(toggle);
+  }
+}
+
 async function initSidebar() {
   const aside = createSidebarShell();
   if (!aside) return;
+
+  attachToggle(aside);
 
   const linksContainer = aside.querySelector('[data-sidebar-links]');
   const userEl = document.getElementById('sidebarUser');
