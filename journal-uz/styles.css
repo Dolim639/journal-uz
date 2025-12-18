@@ -207,3 +207,10 @@ body:has(#welcome-section) p {
   color: #1e293b !important;  /* тёмно-серый */
 }
 
+/* Кнопка входа и бургер в шапке — в один ряд, рядом друг с другом */
+#authSection {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem; /* расстояние между "Вход"/именем и бургером */
+}
+
