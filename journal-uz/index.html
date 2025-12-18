@@ -63,20 +63,9 @@
       <!-- Статьи -->
       <div class="col-lg-9">
         <h5 class="fw-bold text-white mb-4" style="text-shadow: 0 2px 8px rgba(0,0,0,0.3);">Опубликованные статьи</h5>
-        
-        <!-- Индикатор загрузки -->
-        <div id="articlesLoading" class="text-center py-5">
-          <div class="loading-spinner">
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-          </div>
-          <p class="text-white mt-4 fs-5">Загрузка статей...</p>
-        </div>
-        
-        <div id="articlesList" class="row g-4 d-none"></div>
+        <div id="articlesList" class="row g-4"></div>
 
-        <div id="noResults" class="text-center py-5 text-white-50 d-none">
+        <div id="noResults" class="text-center py-5 text-white-50">
           <i class="fas fa-book-open fa-4x mb-4 opacity-75"></i>
           <p class="fs-4">Статьи не найдены</p>
         </div>
@@ -143,15 +132,6 @@
 
     // Статьи — теперь весь текст ЧЁРНЫЙ, ссылки пурпурные
     async function loadArticles(query = '') {
-      const loadingEl = document.getElementById('articlesLoading');
-      const list = document.getElementById('articlesList');
-      const noRes = document.getElementById('noResults');
-      
-      // Показываем загрузку
-      loadingEl.classList.remove('d-none');
-      list.classList.add('d-none');
-      noRes.classList.add('d-none');
-      
       let q = supabase
         .from('submissions')
         .select('id, title, authors, abstract, views, submitted_at')
@@ -164,18 +144,15 @@
       }
 
       const { data: articles } = await q;
-
-      // Скрываем загрузку
-      loadingEl.classList.add('d-none');
+      const list = document.getElementById('articlesList');
+      const noRes = document.getElementById('noResults');
 
       if (!articles || articles.length === 0) {
         list.innerHTML = '';
-        list.classList.add('d-none');
         noRes.classList.remove('d-none');
         return;
       }
       noRes.classList.add('d-none');
-      list.classList.remove('d-none');
 
       const { data: links } = await supabase.from('submission_tags').select('submission_id, tag_id');
       const { data: allTags } = await supabase.from('tags').select('id, name');
@@ -234,41 +211,6 @@
     .btn-outline-cyan:hover {
       background: #0ea5e9 !important;
       color: white !important;
-    }
-
-    /* Красивый индикатор загрузки */
-    .loading-spinner {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .spinner-ring {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255, 255, 255, 0.2);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .spinner-ring:nth-child(2) {
-      animation-delay: 0.2s;
-      width: 40px;
-      height: 40px;
-      border-width: 3px;
-    }
-
-    .spinner-ring:nth-child(3) {
-      animation-delay: 0.4s;
-      width: 30px;
-      height: 30px;
-      border-width: 2px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
     }
   </style>
 </body>
