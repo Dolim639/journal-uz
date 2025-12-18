@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sidebar.css">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body class="bg-light">
@@ -14,9 +15,10 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
     <div class="container">
       <a class="navbar-brand fw-bold" href="index.html">Scienta</a>
-      <div class="navbar-nav ms-auto">
-        <a href="dashboard.html" class="btn btn-outline-light me-3">Личный кабинет</a>
+      <div id="headerRight" class="navbar-nav ms-auto d-flex align-items-center gap-2">
+        <a href="dashboard.html" class="btn btn-outline-light me-1">Личный кабинет</a>
         <button class="btn btn-outline-light" id="logoutBtn">Выйти</button>
+        <!-- бургер добавится сюда через sidebar.js -->
       </div>
     </div>
   </nav>
@@ -114,6 +116,18 @@
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit');
 
+    // Кнопка выхода
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          location.href = 'login.html';
+        }
+      });
+    }
+
     // Загружаем все теги один раз
     async function loadAllTags() {
       if (allTags.length > 0) return allTags;
@@ -179,14 +193,14 @@
         if (!selectedTagIds.includes(tagId)) {
           selectedTagIds.push(tagId);
         }
-      } else {
+        } else {
         // Удаляем тег из массива
         selectedTagIds = selectedTagIds.filter(id => id !== tagId);
-      }
+        }
 
       // Обновляем счётчик и отображение
-      document.getElementById('selectedCount').textContent = selectedTagIds.length;
-      updateSelectedTagsDisplay();
+        document.getElementById('selectedCount').textContent = selectedTagIds.length;
+        updateSelectedTagsDisplay();
     }
 
     // Обновляем отображение выбранных тегов — теперь всегда правильные названия!
@@ -311,6 +325,7 @@
       }
     });
   </script>
+  <script type="module" src="sidebar.js"></script>
 </body>
 </html>
 
