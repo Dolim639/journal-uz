@@ -68,10 +68,10 @@ function attachToggle(aside, backdrop) {
     return;
   }
 
-  // Для главной: ставим прямо в блок authSection справа от кнопки входа/имени
-  const authSection = document.getElementById('authSection');
-  if (authSection) {
-    authSection.appendChild(toggle);
+  // Для главной: ставим в обёртку справа (рядом с authSection), чтобы не теряться при перерисовке
+  const headerRight = document.getElementById('headerRight');
+  if (headerRight) {
+    headerRight.appendChild(toggle);
     return;
   }
 
