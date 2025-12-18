@@ -7,6 +7,32 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
+
+  <style>
+    /* Вкладки в стиле сайта */
+    #reviewTabs .nav-link {
+      border-radius: 999px;
+      padding: 0.5rem 1.5rem;
+      font-weight: 500;
+      color: #0ea5e9;
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      background-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+      transition: all 0.2s ease;
+    }
+
+    #reviewTabs .nav-link:not(.active):hover {
+      background-color: #e0f2fe;
+      color: #0284c7;
+    }
+
+    #reviewTabs .nav-link.active {
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+    }
+  </style>
 </head>
 <body class="bg-light">
 
