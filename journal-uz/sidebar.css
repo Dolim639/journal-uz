@@ -1,0 +1,146 @@
+/* Боковая панель навигации Scienta (off‑canvas) */
+
+body.sidebar-open {
+  overflow: hidden;
+}
+
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 260px;
+  padding: 1.5rem 1.25rem;
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.3), rgba(15, 23, 42, 0.98));
+  color: #e5e7eb;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  z-index: 1040;
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.app-sidebar.is-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.app-sidebar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-sidebar__brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.6);
+}
+
+.app-sidebar__brand-text {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.app-sidebar__user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.app-sidebar__user-label {
+  color: #9ca3af;
+}
+
+.app-sidebar__user-name {
+  font-weight: 600;
+}
+
+.app-sidebar__user-role {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: #e0f2fe;
+  margin-top: 0.15rem;
+}
+
+.app-sidebar__nav {
+  margin-top: 0.25rem;
+}
+
+.app-sidebar__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.app-sidebar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+  background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.35), rgba(30, 64, 175, 0.85));
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.7);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.app-sidebar__link:hover {
+  transform: translateY(-2px);
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.6), rgba(30, 64, 175, 0.95));
+  border-color: rgba(248, 250, 252, 0.9);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.85);
+  color: #f9fafb;
+}
+
+.app-sidebar__icon {
+  width: 1.1rem;
+  text-align: center;
+}
+
+/* Кнопка открытия (гамбургер) переиспользует Bootstrap-классы, тут только лёгкая донастройка при необходимости */
+.app-sidebar-toggle {
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    width: 80%;
+    max-width: 320px;
+  }
+}
+
+
