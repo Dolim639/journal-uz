@@ -178,6 +178,28 @@
     }
   </script>
   <script type="module" src="sidebar.js"></script>
+
+  <!-- Footer -->
+  <footer class="mt-5 py-4" style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);">
+    <div class="container">
+      <div class="row text-white">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <h5 class="fw-bold mb-3">Scienta</h5>
+          <p class="mb-0 opacity-90">Научный рецензируемый журнал Узбекистана</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p class="mb-0 opacity-75">
+            © <span id="currentYear"></span> Scienta. Все права защищены.
+          </p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Устанавливаем текущий год
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
 
