@@ -105,12 +105,21 @@ async function initSidebar() {
   const linksContainer = aside.querySelector('[data-sidebar-links]');
   const userEl = document.getElementById('sidebarUser');
 
+  // Проверяем, находимся ли мы на index.html
+  const isIndexPage = window.location.pathname.endsWith('index.html') || 
+                      window.location.pathname === '/' || 
+                      window.location.pathname.endsWith('/');
+
   // Базовые ссылки для гостя
   const guestLinks = [
-    { id: 'home', label: 'Главная', href: 'index.html', icon: 'fa-house' },
     { id: 'login', label: 'Вход', href: 'login.html', icon: 'fa-right-to-bracket' },
     { id: 'register', label: 'Регистрация', href: 'login.html#register', icon: 'fa-user-plus' }
   ];
+
+  // Добавляем "Главная" только если не на index.html
+  if (!isIndexPage) {
+    guestLinks.unshift({ id: 'home', label: 'Главная', href: 'index.html', icon: 'fa-house' });
+  }
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -142,9 +151,12 @@ async function initSidebar() {
         role === 'reviewer' ? 'Рецензент' : 'Читатель'}</span>
     `;
 
-    const items = [
-      { id: 'home', label: 'Главная', href: 'index.html', icon: 'fa-house' }
-    ];
+    const items = [];
+
+    // Добавляем "Главная" только если не на index.html
+    if (!isIndexPage) {
+      items.push({ id: 'home', label: 'Главная', href: 'index.html', icon: 'fa-house' });
+    }
 
     if (role === 'author') {
       items.push({ id: 'author-dashboard', label: 'Мои статьи', href: 'dashboard.html', icon: 'fa-file-pen' });
