@@ -46,7 +46,7 @@ function renderLinks(linksContainer, items) {
 function attachToggle(aside, backdrop) {
   const toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.className = 'btn btn-outline-light ms-2 app-sidebar-toggle';
+  toggle.className = 'btn btn-outline-light app-sidebar-toggle';
   toggle.setAttribute('aria-label', 'Меню навигации');
 
   toggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
