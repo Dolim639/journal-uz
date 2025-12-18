@@ -68,10 +68,10 @@ function attachToggle(aside, backdrop) {
     return;
   }
 
-  // Для главной: ставим в правую часть шапки после authSection
-  const headerRow = document.querySelector('header .d-flex.justify-content-between');
-  if (headerRow) {
-    headerRow.appendChild(toggle);
+  // Для главной: ставим прямо в блок authSection справа от кнопки входа/имени
+  const authSection = document.getElementById('authSection');
+  if (authSection) {
+    authSection.appendChild(toggle);
     return;
   }
 
