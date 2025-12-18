@@ -1,4 +1,4 @@
-// Боковая панель навигации для всех страниц кропе двух
+// Боковая панель навигации для всех страниц (кроме login/profile)
 // Вкладки: Вход, Регистрация + роль‑зависимые ссылки
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -104,8 +104,7 @@ async function initSidebar() {
 
     if (role === 'admin') {
       items.push(
-        { id: 'admin-panel', label: 'Админ-панель', href: 'admin.html', icon: 'fa-gauge-high' },
-        { id: 'admin-tags', label: 'Теги', href: 'tags.html', icon: 'fa-tags' }
+        { id: 'admin-panel', label: 'Админ-панель', href: 'admin.html', icon: 'fa-gauge-high' }
       );
     }
 
