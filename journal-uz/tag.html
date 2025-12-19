@@ -22,12 +22,33 @@
       flex: 1;
     }
     /* Заголовок в header всегда белый, даже на index-page */
+    body.index-page header h1,
+    body.index-page header .display-5,
     header h1,
     header .display-5 {
       color: #ffffff !important;
     }
+    /* Весь текст в header/navbar белый */
+    body.index-page header,
+    body.index-page header *:not(.dropdown-menu):not(.dropdown-menu *),
     header .text-white,
-    header #authSection {
+    header #authSection,
+    header #authSection *:not(.dropdown-menu):not(.dropdown-menu *),
+    header #headerRight,
+    header #headerRight *:not(.dropdown-menu):not(.dropdown-menu *),
+    header .btn-outline-light,
+    header .dropdown-toggle {
+      color: #ffffff !important;
+    }
+    /* Кнопки в header */
+    header .btn-outline-light,
+    header .dropdown-toggle {
+      border-color: #ffffff !important;
+      color: #ffffff !important;
+    }
+    header .btn-outline-light:hover,
+    header .dropdown-toggle:hover {
+      background-color: rgba(255, 255, 255, 0.2) !important;
       color: #ffffff !important;
     }
   </style>
