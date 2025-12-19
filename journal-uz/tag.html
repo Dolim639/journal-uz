@@ -21,9 +21,14 @@
     .main-content {
       flex: 1;
     }
-    .header-title {
+    /* Заголовок в header всегда белый, даже на index-page */
+    header h1,
+    header .display-5 {
       color: #ffffff !important;
-      text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    header .text-white,
+    header #authSection {
+      color: #ffffff !important;
     }
   </style>
 </head>
